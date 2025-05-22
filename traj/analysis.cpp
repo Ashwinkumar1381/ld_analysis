@@ -261,45 +261,54 @@ void analysis::Trajectory::closeTrajectory()
 	fclose(fileI);
 }
 
-void analysis::Trajectory::importTrajectory(atom_style **ATOMS, System *BOX, long startStep, long endStep)
+void analysis::Trajectory::importTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
 {
-	long frameStart = long(startStep / TRAJ->frameWidth);
-	long frameEnd = long(endStep / TRAJ->frameWidth);
-
 	atom_style *tempATOMS = new atom_style();
 
 	frame_nr = -1;
 	while( !feof(fileI) )
 	{
-		// readThisFrame(ATOMS[frame_nr + 1]);
 		readThisFrame(tempATOMS);
 
-		if(frame_nr > 0)
+		if(frame_nr >= frameStart and frame_nr <= frameEnd)
 		{
-			for(int i = 0; i < nAtoms; i++)
+			int new_frame = frame_nr - frameStart;
+
+			ATOMS[new_frame] = tempATOMS;
+
+			if(new_frame == 0) 
+				printf("First frame: Step %ld\n", step);
+
+			if(new_frame > 0)
 			{
-				ATOMS[frame_nr][i].jumpx = ATOMS[frame_nr - 1][i].jumpx;
-				ATOMS[frame_nr][i].jumpy = ATOMS[frame_nr - 1][i].jumpy;
+				for(int i = 0; i < nAtoms; i++)
+				{
+					ATOMS[new_frame][i].jumpx = ATOMS[new_frame - 1][i].jumpx;
+					ATOMS[new_frame][i].jumpy = ATOMS[new_frame - 1][i].jumpy;
 
-				float dx = ATOMS[frame_nr][i].rxt1 - ATOMS[frame_nr - 1][i].rxt1;
-				float dy = ATOMS[frame_nr][i].ryt1 - ATOMS[frame_nr - 1][i].ryt1;
+					float dx = ATOMS[new_frame][i].rxt1 - ATOMS[new_frame - 1][i].rxt1;
+					float dy = ATOMS[new_frame][i].ryt1 - ATOMS[new_frame - 1][i].ryt1;
 
-				if(dx <= -0.5*BOX->Lx) ATOMS[frame_nr][i].jumpx++;
-				else if(dx >= 0.5*BOX->Lx) ATOMS[frame_nr][i].jumpx--;
+					if(dx <= -0.5*BOX->Lx) ATOMS[new_frame][i].jumpx++;
+					else if(dx >= 0.5*BOX->Lx) ATOMS[new_frame][i].jumpx--;
 
-				if(dy <= -0.5*BOX->Ly) ATOMS[frame_nr][i].jumpy++;
-				else if(dy >= 0.5*BOX->Ly) ATOMS[frame_nr][i].jumpy--;
+					if(dy <= -0.5*BOX->Ly) ATOMS[new_frame][i].jumpy++;
+					else if(dy >= 0.5*BOX->Ly) ATOMS[new_frame][i].jumpy--;
+				}
 			}
-		}
 
-		if(frame_nr == totalFrames - 1) 
-			break;
+			if(new_frame == frameEnd - frameStart)
+			{
+				printf("Last frame: Step %ld\n", step);
+				break;
+			} 
+		}
 	}
 
 	printf("\nCoordinates imported successfully!\n");
 	rewind(fileI);
 
-	delete[] tempATOMS;
+	delete tempATOMS;
 }
 
 void analysis::Trajectory::countFrames()

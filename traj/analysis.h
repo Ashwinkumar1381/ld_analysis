@@ -99,7 +99,7 @@ namespace analysis {
 
 	void openTrajectory(bool count = false);
 	void closeTrajectory();
-	void importTrajectory(atom_style **ATOMS, System *BOX, long startStep, long endStep);
+	void importTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);
 	void readNextFrame(atom_style *ATOMS);

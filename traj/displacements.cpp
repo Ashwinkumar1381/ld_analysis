@@ -24,18 +24,17 @@ int main(int argc, char *argv[])
 	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data38/traj2.xyz");
 	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data38/dispDist.dat");
 	TRAJ -> openTrajectory();
-	// TRAJ -> countFrames();
 
-	auto Hist = buildHistogram(nBins);
-
-	atom_style **ATOMS = new atom_style*[TRAJ->totalFrames];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
-	for(int i = 0; i < TRAJ->totalFrames; i++)
+	int frameStart = int(startStep/frameW), frameEnd = int(endStep/frameW);
+	int totalFrames = frameEnd - frameStart + 1;
+	atom_style **ATOMS = new atom_style*[totalFrames];
+	for(int i = 0; i < totalFrames; i++)
 		ATOMS[i] = new atom_style[TRAJ->nAtoms];
 
-	printf("%ld %ld\n", (endStep/frameW), (startStep/frameW));
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
+	auto Hist = buildHistogram(nBins);
 
-	// TRAJ -> importTrajectory(ATOMS, BOX, startStep, endStep);
+	TRAJ -> importTrajectory(ATOMS, BOX, frameStart, frameEnd);
 	// computeDisplacementDistribution(ATOMS, TRAJ, BOX, Hist, Rcut, binW, sep);
 
 	delete[] ATOMS;
