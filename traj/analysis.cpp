@@ -218,7 +218,7 @@ void analysis::Hist2D::normalize(float fac)
 
 /* ----------------- Trajectory members -----------------*/
 
-analysis::Trajectory::Trajectory(float timeStep, int frameWidth)
+analysis::Trajectory::Trajectory(float timeStep, int frameWidth, char fileFormat[10])
 {
 	fpathI = new char [500];
 	fpathO = new char [500];
@@ -230,6 +230,7 @@ analysis::Trajectory::Trajectory(float timeStep, int frameWidth)
 	frame_nr = -1;
 	this->timeStep = timeStep;
 	this->frameWidth = frameWidth;
+	format = fileFormat;
 	xCom = yCom = zCom = 0.0;
 }
 
@@ -245,8 +246,19 @@ void analysis::Trajectory::openTrajectory(bool count)
 	}
 	else
 	{
-		fgets(pipeString, 500, fileI);
-		sscanf(pipeString, "%d", &nAtoms);
+		if(strcmp(format, "xyz") == 0)
+		{
+			fgets(pipeString, 500, fileI);
+			sscanf(pipeString, "%d", &nAtoms);			
+		}
+		else if(strcmp(format, "cfg") == 0)
+		{
+			for(int i = 0; i < 4; i++) 
+				fgets(pipeString, 500, fileI);
+
+			sscanf(pipeString, "%d", &nAtoms);
+		}
+
 		rewind(fileI);
 		printf("\nTrajectory %s file opened and ready to be read...\n", fpathI);
 	}
@@ -261,7 +273,7 @@ void analysis::Trajectory::closeTrajectory()
 	fclose(fileI);
 }
 
-void analysis::Trajectory::importTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
+void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
 {
 	atom_style *tempATOMS = new atom_style();
 
@@ -331,16 +343,44 @@ void analysis::Trajectory::countFrames()
 
 void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 {
-	fgets(pipeString, 500, fileI);
-	
-	fgets(pipeString, 500, fileI);
-	// sscanf(pipeString, "%*s %d", &step);
-	sscanf(pipeString, "%*s %*s %ld", &step);
-
-	for(int i = 0; i < nAtoms; i++)
+	if(strcmp(format, "xyz") == 0)
 	{
-		fgets(pipeString, 500, fileI);
-		sscanf(pipeString, "%c %f %f %*f %*f %*f", &ATOMS[i].id, &ATOMS[i].rxt1, &ATOMS[i].ryt1);
+		for(int i = 0; i < 9; i++)
+			fgets(pipeString, 500, fileI);
+
+		sscanf(pipeString, "%*s %*s %ld", &step);
+
+		for(int i = 0; i < nAtoms; i++)
+		{
+			fgets(pipeString, 500, fileI);
+			sscanf(pipeString, "%c %f %f %*f %*f %*f", &ATOMS[i].id, &ATOMS[i].rxt1, &ATOMS[i].ryt1);
+		}		
+	}
+
+	else if(strcmp(format, "cfg") == 0)
+	{
+		int pid;
+
+		for(int i = 0; i < 2; i++)
+			fgets(pipeString, 500, fileI);
+
+		sscanf(pipeString, "%ld", &step);
+
+		for(int i = 0; i < 7; i++)
+			fgets(pipeString, 500, fileI);
+
+		for(int i = 0; i < nAtoms; i++)
+		{
+			fgets(pipeString, 500, fileI);
+
+			sscanf(pipeString, "%d %*d %*f %*f %*f %*f %*f %*f", &pid);
+			pid -= 1;
+
+			sscanf(pipeString, "%*d %d %f %f %f %f %f %f", &ATOMS[pid].type, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].rzt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].vz);
+
+			if(ATOMS[pid].type == 1) ATOMS[pid].id = 'N';
+			else if(ATOMS[pid].type == 2) ATOMS[pid].id = 'O';
+		}
 	}
 
 	frame_nr++;

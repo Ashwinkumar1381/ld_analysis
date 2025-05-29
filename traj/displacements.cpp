@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
 	auto Hist = buildHistogram(nBins);
 
-	TRAJ -> importTrajectory(ATOMS, BOX, frameStart, frameEnd);
+	TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd);
 	// computeDisplacementDistribution(ATOMS, TRAJ, BOX, Hist, Rcut, binW, sep);
 
 	delete[] ATOMS;

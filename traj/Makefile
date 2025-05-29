@@ -31,5 +31,8 @@ disp: displacements.cpp analysis.cpp
 sk: structure.cpp analysis.cpp
 	$(CC) $(CFLAGS) structure.cpp analysis.cpp -o ./bin/sk.o
 
+res: makeRestart.cpp analysis.cpp
+	$(CC) $(CFLAGS) makeRestart.cpp analysis.cpp -o ./bin/res.o
+
 clean:
 	rm -f ./bin/*.o

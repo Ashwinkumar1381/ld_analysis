@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	for(int i = 0; i < TRAJ -> totalFrames; i++) 
 		ATOMS[i] = new atom_style [TRAJ->nAtoms];
 
-	TRAJ -> importTrajectory(ATOMS, BOX);
+	TRAJ -> loadTrajectory(ATOMS, BOX);
 	TRAJ -> closeTrajectory(); 
 
 	float *meanSquaredDisplacement = computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, delFrames, nSample);

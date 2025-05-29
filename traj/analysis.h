@@ -15,9 +15,10 @@ namespace analysis {
 	public:
 
 	char id;
+	int type;
 	float rxt1, ryt1, rzt1; 		// *) Used in MSD calculations 
 	float rxt2, ryt2, rzt2; 
-	float px, py;
+	float vx, vy, vz;
 	float dx, dy, dz;
 	int jumpx, jumpy;
 
@@ -90,26 +91,28 @@ namespace analysis {
 	int nAtoms, frame_nr, totalFrames, frameWidth;
 	float timeStep, time;
 	float xCom, yCom, zCom; 
+	char *format;
 
 	char *fpathI, *fpathO, *pipeString, *pipeChar;
 	FILE *fileI, *fileO;
 
-	Trajectory(float timeStep = 1.0, int frameWidth = 1);
+	Trajectory(float timeStep = 1.0, int frameWidth = 1, char fileFormat[10] = "xyz");
 	~Trajectory();
 
 	void openTrajectory(bool count = false);
 	void closeTrajectory();
-	void importTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
+	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);
 	void readNextFrame(atom_style *ATOMS);
+	void copyThisFrame(atom_style *From, atom_style *To);
 	void computeCom(atom_style *ATOMS);
 
 	void write2file();
 	void write2file(Bin1D *bin1, int ctr = 0);
 	void write2file(Bin1D *binA, Bin1D *binB, int ctr = 0, float timeToAvg = 0.0);
 	void write2file(Bin1D **Pin, Bin1D **Pkin, Bin1D *Pswim, int ctr = 0);
-	void write2file(float *meanSquaredDisplacement, const int delFrames[], int nSamples);
+	void write2file(float **MSD, const int delFrames[], int nSample);
 	void write2file(float time, float order, int step = -1);
 	void write2file(float *rn, float **RDF, int nRDF, int nBins);
 	void write2file(float ***RDF_x_y, int nRDF, int nBins[], float binW[], char option[]);
