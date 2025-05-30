@@ -1,3 +1,12 @@
+/*
+	Code to compute displacement distributions along x- and y- axis
+	by averaging over all particles and over time  
+
+	Author  	  : Ashwin Kumar
+	Date created  : 21.05.25
+	Last modified : 25.05.25
+*/
+
 #include "analysis.h"
 
 using namespace analysis;
@@ -9,39 +18,39 @@ int main(int argc, char *argv[])
 {
 	// ----------- System params -----------
 	float Lx = 150.0, Ly = 30.0;
-	float Rcut[2] = {10.0, 10.0};
+	float Rcut[2] = {1e3, 1e3};
 	float binW[2] = {0.1, 0.1}; 
 	int nBins[2] = {int(Rcut[0]/binW[0]), int(Rcut[1]/binW[1])};
 
 	// ----------- Trajectory params -----------
 	long eq_steps = long(1e7);
-	long startStep = long(8e9), endStep = long(10e9);
+	long startStep = long(8e8), endStep = long(10e8);
 	float dt = 5e-4;
-	int frameW = int(1e5);
-	int sep = 1;
+	int frameW = int(1e4);
+	int sep = 10;
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW);
-	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data38/traj2.xyz");
-	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data38/dispDist.dat");
+	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data44/traj2.xyz");
+	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data44/dispDist.dat");
 	TRAJ -> openTrajectory();
 
 	int frameStart = int(startStep/frameW), frameEnd = int(endStep/frameW);
-	int totalFrames = frameEnd - frameStart + 1;
-	atom_style **ATOMS = new atom_style*[totalFrames];
-	for(int i = 0; i < totalFrames; i++)
+	TRAJ->totalFrames = frameEnd - frameStart + 1;
+
+	atom_style **ATOMS = new atom_style*[TRAJ->totalFrames];
+	for(int i = 0; i < TRAJ->totalFrames; i++)
 		ATOMS[i] = new atom_style[TRAJ->nAtoms];
 
 	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
 	auto Hist = buildHistogram(nBins);
 
 	TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd);
-	// computeDisplacementDistribution(ATOMS, TRAJ, BOX, Hist, Rcut, binW, sep);
 
-	delete[] ATOMS;
+	computeDisplacementDistribution(ATOMS, TRAJ, BOX, Hist, Rcut, binW, sep);
 
-	// TRAJ -> write2file(Hist, nBins);
-
+	TRAJ -> write2file(Hist, nBins);
 	TRAJ -> closeTrajectory();
+
 	return(0);
 }
 
@@ -60,6 +69,8 @@ float **buildHistogram(int nBins[])
 
 void computeDisplacementDistribution(atom_style **ATOMS, Trajectory *TRAJ, System *BOX, float **Hist, float Rcut[], float binW[], int sep)
 {
+	printf("\nComputing Displacement distributions...\n");
+
 	int nBins[2] = {int(Rcut[0]/binW[0]), int(Rcut[1]/binW[1])};
 
 	for(int i = sep; i < TRAJ->totalFrames; i++)

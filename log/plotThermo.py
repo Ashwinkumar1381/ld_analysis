@@ -10,9 +10,9 @@ mpl.pyplot.rc('text', usetex=True)
 
 dt = 5e-4
 
-fpath = os.getcwd().removesuffix("/ld_analysis/log") + "/LD/LD-cpp/Data15/thermo3.dat"
+fpath = os.getcwd().removesuffix("/ld_analysis/log") + "/LD/LD-cpp/Data42/thermo3.dat"
 
-[step, ke, pe, etot, T] = file_utils.readData(fpath, 1)
+[step, pe, ke, etot, T] = file_utils.readData(fpath, 1)
 
 fig, ax = mpl.pyplot.subplots()
 

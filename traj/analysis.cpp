@@ -1,4 +1,11 @@
-// analysis.cpp
+/*
+	analysis.cpp
+
+	Some utility classes to perform analysis on Trajectories
+
+	Date created  : 28.11.24
+	Last modified : 29.05.25
+*/
 
 #include "analysis.h"
 
@@ -275,7 +282,7 @@ void analysis::Trajectory::closeTrajectory()
 
 void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
 {
-	atom_style *tempATOMS = new atom_style();
+	atom_style *tempATOMS = new atom_style[nAtoms];
 
 	frame_nr = -1;
 	while( !feof(fileI) )
@@ -286,10 +293,10 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 		{
 			int new_frame = frame_nr - frameStart;
 
-			ATOMS[new_frame] = tempATOMS;
+			copyThisFrame(tempATOMS, ATOMS[new_frame]);
 
 			if(new_frame == 0) 
-				printf("First frame: Step %ld\n", step);
+				printf("\nFirst frame: Step %ld\n", step);
 
 			if(new_frame > 0)
 			{
@@ -317,10 +324,23 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 		}
 	}
 
-	printf("\nCoordinates imported successfully!\n");
+	printf("\nCoordinates loaded successfully!\n");
 	rewind(fileI);
 
-	delete tempATOMS;
+	delete[] tempATOMS;
+}
+
+void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To)
+{
+	for(int i = 0; i < nAtoms; i++)
+	{
+		To[i].id = From[i].id;
+		To[i].rxt1 = From[i].rxt1;
+		To[i].ryt1 = From[i].ryt1;
+		To[i].rzt1 = From[i].rzt1;
+		To[i].jumpx = From[i].jumpx;
+		To[i].jumpy = From[i].jumpy;
+	}
 }
 
 void analysis::Trajectory::countFrames()

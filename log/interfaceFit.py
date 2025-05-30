@@ -30,8 +30,8 @@ def getGibbsPlane(x, pdf):
             y1 = [(phiL - i) for i in pdf[0:pos+1]]
             y2 = [(i - phiG) for i in pdf[pos:len(x)]]
             
-        int1.append(np.trapezoid(y1,x1))
-        int2.append(np.trapezoid(y2,x2))
+        int1.append(np.trapz(y1,x1))
+        int2.append(np.trapz(y2,x2))
             
     for i in range(len(x)):
         if(int1[i] >= int2[i]):
@@ -94,8 +94,8 @@ if(option == "frames"):
 
 if(option == "tavg"):
     # Params for time-averaged data
-    nr_list = [51, 55]
-    Pe = [1, 50]
+    nr_list = [32]
+    Pe = [5]
     lamb = ["1"]
     Lx = 200.0
     
@@ -103,7 +103,7 @@ if(option == "tavg"):
     fig2, ax2 = mpl.pyplot.subplots()
     for i in range(len(nr_list)):
         fpath = "../../LD/LD-cpp/Data{nr}/pdf_tavg.dat".format(nr = nr_list[i])
-        figpath = "../../LD/LD-cpp/imgs/pdf_tavg_1.png"
+        figpath = "../../LD/LD-cpp/imgs/pdf_fit1.png"
         pdfData = file_utils.readData(fpath, 1)
         
         x = pdfData[0]
@@ -121,7 +121,8 @@ if(option == "tavg"):
         
         mid = int(len(pdfALL)/2)
         ax.plot(x, pdfALL, "-o", lw = lw, ms = ms, fillstyle = fs, label = str(Pe[i]))
-        ax2.plot(x[0:mid], pdfALLavg, "-o", lw = lw, ms = ms, fillstyle = fs, label = str(Pe[i]))
+        ax2.plot(x[0:mid], pdfALLavg, "-o", lw = lw, ms = ms, fillstyle = fs, 
+                 label = str(Pe[i]), color = "crimson")
     
         xG1 = getGibbsPlane(x[0:mid], pdfALL[0:mid])
         xG2 = getGibbsPlane(x[mid:len(x)], pdfALL[mid:len(x)])
@@ -133,10 +134,10 @@ if(option == "tavg"):
         print("Pe = {Pe}, rhoG = {rhoG}, rhoL = {rhoL}, D = {D}".format(Pe = Pe[i], 
                     rhoG = C[0]+C[1], rhoL = C[0]-C[1], D = m.sqrt(m.pi)*C[2]))
         
-        """
         pdfFit = [C[0]+C[1]*np.tanh((i-xG1)/C[2]) for i in x[0:mid]]
         ax2.plot(x[0:mid], pdfFit, "-o", lw = lw, ms = ms, fillstyle = fs)
         
+        """
         SStot = 0
         SSres = 0
         pdfTestFit = pdfALL[0:mid]
@@ -148,13 +149,15 @@ if(option == "tavg"):
     
     ax.set(xlim = (-Lx/2, Lx/2), ylim = (-0.01, 1.8), aspect = Lx/2)
     ax.set_xlabel(r"$x~(\sigma)$", fontsize = fontsize - 4)
-    ax.set_ylabel(r"$<\rho~(x)>$", fontsize = fontsize - 4)
+    ax.set_ylabel(r"$\rho(x) \sigma^3$", fontsize = fontsize - 4)
     ax.legend(title = r"$Pe_s$", fontsize = fontsize - 8)
     fig.suptitle(r"$\lambda = {lamb}$".format(lamb = lamb[0]))
     
-    ax2.set(xlim = (-Lx/2, 0), ylim = (-0.01, 1), aspect = Lx/2)
-    ax2.set_xlabel(r"$x~(\sigma)$", fontsize = fontsize - 4)
-    ax2.set_ylabel(r"$<\rho~(x)>$", fontsize = fontsize - 4)
-    ax2.legend(title = r"$Pe_s$", fontsize = fontsize - 6)
+    ax2.set(xlim = (-Lx/2,0), ylim = (-0.01, 1.3), aspect = Lx/2)
+    ax2.set_xlabel(r"$x/\sigma$", fontsize = fontsize - 2)
+    ax2.set_ylabel(r"$\rho(x) \sigma^3$", fontsize = fontsize - 2)
+    #ax2.legend(title = r"$Pe_s$", fontsize = fontsize - 3)
+    fig.set_figheight(5)
+    fig.set_figwidth(7)
     
-    fig.savefig(figpath, dpi = 600, bbox_inches = "tight")
+    fig2.savefig(figpath, dpi = 600, bbox_inches = "tight")

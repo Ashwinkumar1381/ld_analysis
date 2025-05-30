@@ -3,50 +3,26 @@ Extracts columns of thermo data from log.lammps and writes to thermo.dat
 
 Author          : Ashwin Kumar M
 Date created    : 16.10.24
-Last modified   : 16.10.24
-
--------- INPUTS -------
-argv[1] = nr    (file no.)
-argv[2] = nRuns (number of the run set whose data need to be collected)
------------------------
+Last modified   : 03.02.25
 """
 
 print("\033[J\033[H",end='') # Clear screen
 
-import os
-import sys
+from file_utils import *
 
-def line2array(line):
-    line = line.removesuffix("\n").split(sep = " ")
-    line2 = []
-    for element in line:
-        if(element != ''): line2.append(element)
-    if(line2 == []): line2.append('0')
-    return(line2)
+nRuns = 2
 
-def array2line(array):
-    line = ""
-    for i in range(len(array)):
-        line += str(array[i]) + " "
-    return(line.removesuffix(" "))
-
-args = sys.argv
-
-fname1 = os.getcwd().removesuffix('/ld_analysis/log') + \
-        '/LD/lmp/Data{nr}/log.lammps'.format(nr = int(args[1]))
+fname1 = "../../../TA-CH5041/Data8/log.lammps"
 fobj1 = open(fname1, mode = "r", encoding = "utf-8")
 
 fname2 = fname1.removesuffix("/log.lammps") + "/thermo.dat"
 fobj2 = open(fname2, mode = "w")
 
-print(fname1, '\n')
-print(fname2, '\n')
-
 run_nr = 0
 for line in fobj1:
     array = line2array(line)
     
-    if(run_nr == int(args[2])):
+    if(run_nr == nRuns):
         if(array[0] == 'Loop'): break
         else:
             line = array2line(array) 
