@@ -88,7 +88,8 @@ namespace analysis {
 	public:
 
 	long step; 
-	int nAtoms, frame_nr, totalFrames, frameWidth;
+	int nAtoms, nAtomTypes;
+	int frame_nr, totalFrames, frameWidth;
 	float timeStep, time;
 	float xCom, yCom, zCom; 
 	char *format;
@@ -105,6 +106,7 @@ namespace analysis {
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);
 	void readNextFrame(atom_style *ATOMS);
+	void writeThisFrame(atom_style *ATOMS, long add_step = 0);
 	void copyThisFrame(atom_style *From, atom_style *To);
 	void computeCom(atom_style *ATOMS);
 
@@ -112,7 +114,7 @@ namespace analysis {
 	void write2file(Bin1D *bin1, int ctr = 0);
 	void write2file(Bin1D *binA, Bin1D *binB, int ctr = 0, float timeToAvg = 0.0);
 	void write2file(Bin1D **Pin, Bin1D **Pkin, Bin1D *Pswim, int ctr = 0);
-	void write2file(float **MSD, const int delFrames[], int nSample);
+	void write2file(float **MSD, int *delFrames, int nSample);
 	void write2file(float time, float order, int step = -1);
 	void write2file(float *rn, float **RDF, int nRDF, int nBins);
 	void write2file(float ***RDF_x_y, int nRDF, int nBins[], float binW[], char option[]);

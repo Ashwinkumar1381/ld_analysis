@@ -34,5 +34,8 @@ sk: structure.cpp analysis.cpp
 res: makeRestart.cpp analysis.cpp
 	$(CC) $(CFLAGS) makeRestart.cpp analysis.cpp -o ./bin/res.o
 
+merge_traj: mergeTraj.cpp analysis.cpp 
+	$(CC) $(CFLAGS) mergeTraj.cpp analysis.cpp -o ./bin/merge.o
+
 clean:
 	rm -f ./bin/*.o

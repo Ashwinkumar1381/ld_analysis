@@ -267,6 +267,7 @@ void analysis::Trajectory::openTrajectory(bool count)
 		}
 
 		rewind(fileI);
+		frame_nr = -1;
 		printf("\nTrajectory %s file opened and ready to be read...\n", fpathI);
 	}
 
@@ -365,7 +366,7 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 {
 	if(strcmp(format, "xyz") == 0)
 	{
-		for(int i = 0; i < 9; i++)
+		for(int i = 0; i < 2; i++)
 			fgets(pipeString, 500, fileI);
 
 		sscanf(pipeString, "%*s %*s %ld", &step);
@@ -404,6 +405,36 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 	}
 
 	frame_nr++;
+}
+
+void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, long add_step)
+{
+	if(add_step == -1)
+	{
+		remove(fpathO);
+		fileO = fopen(fpathO, "a+");
+		if(fileO == NULL)
+		{
+			printf("Cannot create file %s for merging. Exiting...\n");
+			exit(-1);
+		}
+		else
+		{
+			fprintf(fileO, "%d\n", nAtoms);
+			fprintf(fileO, " Atoms. Timestep: %ld\n", step);
+
+			for(int i = 0; i < nAtoms; i++)
+				fprintf(fileO, "%c %g %g 0\n", ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1);
+		}	
+	}
+	else
+	{
+		fprintf(fileO, "%d\n", nAtoms);
+		fprintf(fileO, " Atoms. Timestep: %ld\n", step + add_step);
+
+		for(int i = 0; i < nAtoms; i++)
+			fprintf(fileO, "%c %g %g 0\n", ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1);
+	}
 }
 
 void analysis::Trajectory::computeCom(atom_style *ATOMS)
