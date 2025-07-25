@@ -5,15 +5,15 @@ using namespace analysis;
 int main(int argc, char* argv[])
 {
 	float dt = 5e-4;
-	int frameW = int(1e5);
-	long startStep1 = long(1e7);
-	long endStep1 = long(997e7);
+	int frameW = int(1e4);
+	long startStep1 = long(901e7);
+	long endStep1 = long(944e7);
 	long startStep2 = long(0);
-	long endStep2 = long(4e7);
+	long endStep2 = long(57e7);
 
 	Trajectory *TRAJ = new Trajectory(dt , frameW, "xyz");
-	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data26/traj2.xyz");
-	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data26/traj2_merged.xyz");
+	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data28/traj2.xyz");
+	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data28/traj2_merged.xyz");
 
 	TRAJ -> openTrajectory();
 
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
 		if(TRAJ->step == startStep1)
 			TRAJ -> writeThisFrame(ATOMS, -1);
-		else
+		else if(TRAJ->step < endStep1)
 			TRAJ -> writeThisFrame(ATOMS);
 
 		if(TRAJ->step == endStep1) 
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
 	TRAJ -> closeTrajectory();
 
-	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data26/traj3.xyz");
+	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data28/traj3.xyz");
 
 	TRAJ -> openTrajectory();
 

@@ -21,8 +21,7 @@ int main(int argc, char *argv[])
 	int nAtomTypes = 2;
 
 	// ----------- Trajectory Params -----------
-	long eq_steps = long(1e7);
-	long startStep = long(0e9), endStep = long(2e9);
+	int frameStart = int(0), frameEnd = int(2000);
 	float dt = 5e-4;
 	int frameW = int(1e5);
 	int sep = 1;
@@ -41,7 +40,6 @@ int main(int argc, char *argv[])
 	for(int i = 0; i < nSample; i++) 
 		delFrames[i] = int(delFrames[i] * sep);
 
-	int frameStart = int(startStep/frameW), frameEnd = int(endStep/frameW);
 	TRAJ->totalFrames = frameEnd - frameStart + 1;
 
 	atom_style **ATOMS = new atom_style* [TRAJ->totalFrames];

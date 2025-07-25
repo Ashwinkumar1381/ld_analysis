@@ -56,6 +56,11 @@ def readData(fpath, nDataSets = 1):
                     else:
                         Cols[i].append(liteval(line[i]))
             else:
+                for i in range(len(line)):
+                    if(line[i].isalpha() == True):
+                        fields.append(line[i])
+                    else:
+                        fields.append(liteval(line[i]))
                 continue
         
     else:
@@ -121,3 +126,24 @@ def copyList(a, lt = None, gt = None, leq = None, geq = None):
         temp = a
 
     return(temp)
+
+# Returns only the most significant points in a time-series data
+def trimTimeSeries(array, threshold):
+    index = [0]
+
+    for i in range(1, len(array)):
+        perc_change = abs((array[i] - array[i-1]) / array[i-1]) * 100
+        if(perc_change >= threshold):
+            index.append(i)
+
+    return(index)
+
+# Takes in an array whose elements are strings of float numbers written in scientific notation
+# Each such array element is converted into the corresponding LaTeX format
+def float2latex(array):
+    for i in range(len(array)):
+        if('e' in array[i]): 
+            array[i] = array[i].replace("e", "\\times 10^{") + "}" 
+
+    if(len(array) == 1): return(array[0])
+    else: return(array)

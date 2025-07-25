@@ -15,7 +15,9 @@ using namespace analysis;
 
 analysis::atomsXYZ::atomsXYZ()
 {
-	rxt1 = ryt1 = rzt1 = 0.0;
+	rxt1 = ryt1 = rxt2 = ryt2 = 0.0;
+	vx = vy = vxth = vyth = 0.0;
+	fx = fy = 0.0;
 	jumpx = jumpy = 0;
 }
 
@@ -23,11 +25,12 @@ analysis::atomsXYZ::~atomsXYZ(){}
 
 /* ----------------- System members -----------------*/
 
-analysis::System::System(float Lx, float Ly, float nAtoms, float rcellx, float rcelly)
+analysis::System::System(float Lx, float Ly, int nAtoms, int nAtomTypes, float rcellx, float rcelly)
 {
 	this -> Lx = Lx;
 	this -> Ly = Ly;
 	this -> nAtoms = nAtoms;
+	this -> nAtomTypes = nAtomTypes;
 	this -> rcellx = rcellx;
 	this -> rcelly = rcelly;
 
@@ -77,7 +80,7 @@ void analysis::System::buildCellMaps()
 		}
 	}
     
-    printf("Successfully constructed MAPS array with %d cells.\n", int(Ncellx * Ncelly));
+    printf("\nSuccessfully constructed MAPS array with %d cells.\n", int(Ncellx * Ncelly));
 }
 
 void analysis::System::buildCellList(atom_style *ATOMS)
@@ -275,10 +278,26 @@ void analysis::Trajectory::openTrajectory(bool count)
 		countFrames();
 }
 
+void analysis::Trajectory::createOutputFile(char line[])
+{
+	remove(fpathO);
+	fileO = fopen(fpathO, "a+");
+	if(fileO == NULL)
+	{
+		printf("Cannot create file %s for writing. Exiting...\n");
+		exit(-1);
+	}
+	if(strcmp(line, "") != 0)
+		fprintf(fileO, "%s", line);		
+}
+
 void analysis::Trajectory::closeTrajectory()
 {
 	printf("\nClosing trajectory file.\n");
 	fclose(fileI);
+
+	if(fileO != NULL)
+		fclose(fileO);
 }
 
 void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
@@ -338,7 +357,6 @@ void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To)
 		To[i].id = From[i].id;
 		To[i].rxt1 = From[i].rxt1;
 		To[i].ryt1 = From[i].ryt1;
-		To[i].rzt1 = From[i].rzt1;
 		To[i].jumpx = From[i].jumpx;
 		To[i].jumpy = From[i].jumpy;
 	}
@@ -397,37 +415,24 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			sscanf(pipeString, "%d %*d %*f %*f %*f %*f %*f %*f", &pid);
 			pid -= 1;
 
-			sscanf(pipeString, "%*d %d %f %f %f %f %f %f", &ATOMS[pid].type, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].rzt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].vz);
+			// sscanf(pipeString, "%*d %d %f %f %f %f %d %d", &ATOMS[pid].type, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
-			if(ATOMS[pid].type == 1) ATOMS[pid].id = 'N';
-			else if(ATOMS[pid].type == 2) ATOMS[pid].id = 'O';
+			// if(ATOMS[pid].type == 1) ATOMS[pid].id = 'N';
+			// else if(ATOMS[pid].type == 2) ATOMS[pid].id = 'O';
+
+			sscanf(pipeString, "%*d %c %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+
+			if(ATOMS[pid].id == 'N') ATOMS[pid].type = 1;
+			else if(ATOMS[pid].id == 'O') ATOMS[pid].type = 2;
 		}
 	}
 
 	frame_nr++;
 }
 
-void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, long add_step)
+void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long add_step)
 {
-	if(add_step == -1)
-	{
-		remove(fpathO);
-		fileO = fopen(fpathO, "a+");
-		if(fileO == NULL)
-		{
-			printf("Cannot create file %s for merging. Exiting...\n");
-			exit(-1);
-		}
-		else
-		{
-			fprintf(fileO, "%d\n", nAtoms);
-			fprintf(fileO, " Atoms. Timestep: %ld\n", step);
-
-			for(int i = 0; i < nAtoms; i++)
-				fprintf(fileO, "%c %g %g 0\n", ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1);
-		}	
-	}
-	else
+	if(strcmp(format, "xyz") == 0)
 	{
 		fprintf(fileO, "%d\n", nAtoms);
 		fprintf(fileO, " Atoms. Timestep: %ld\n", step + add_step);
@@ -435,20 +440,161 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, long add_step)
 		for(int i = 0; i < nAtoms; i++)
 			fprintf(fileO, "%c %g %g 0\n", ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1);
 	}
+
+	else if(strcmp(format, "cfg") == 0)
+	{
+		fprintf(fileO, "ITEM: TIMESTEP\n");
+		fprintf(fileO, "%ld\n", step + add_step);
+		fprintf(fileO, "ITEM: NUMBER OF ATOMS\n");
+		fprintf(fileO, "%ld\n", nAtoms);
+		fprintf(fileO, "ITEM: BOX BOUNDS pp pp pp\n");
+		fprintf(fileO, "%g %g\n", 0.0, BOX->Lx);
+		fprintf(fileO, "%g %g\n", 0.0, BOX->Ly);
+		fprintf(fileO, "0 0\n");
+		fprintf(fileO, "ITEM: ATOMS id element x y vx vy ix iy\n");
+
+		for(int i = 0; i < nAtoms; i++)
+			fprintf(fileO, "%d %c %g %g %g %g %d %d\n", i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].jumpx, ATOMS[i].jumpy);
+	}
 }
 
 void analysis::Trajectory::computeCom(atom_style *ATOMS)
 {
-	xCom = yCom = zCom = 0.0;
+	xCom = yCom = 0.0;
 
 	for(int i = 0; i < nAtoms; i++)
 	{
 		xCom += ATOMS[i].rxt1;
 		yCom += ATOMS[i].ryt1;
-		zCom += ATOMS[i].rzt1;
 	}	
 
 	xCom /= nAtoms;
 	yCom /= nAtoms;
-	zCom /= nAtoms;
+}
+
+int analysis::bounds(float a)
+{
+	float num = abs(a);
+	int d = 0;
+	while(int(num) > 0)
+	{
+		num = num/10;
+		d += 1;
+	}
+
+	d = int(pow(10, d-1));
+
+	int sign;
+	if(a < 0) sign = -1;
+	else sign = 1;
+
+	int b = int(a) - sign*(int(sign*a)%d) + sign*d;
+	return(b);
+}
+
+float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS)
+{
+	float rcut2 = INTERACTIONS->rcut * INTERACTIONS->rcut;
+
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		ATOMS[i].fx = 0.0;
+		ATOMS[i].fy = 0.0;
+	}
+
+	float pe = 0.0;
+	
+	BOX -> buildCellList(ATOMS);
+
+	for(int icell = 1; icell <= BOX->ncells; icell++)
+	{
+		int i = BOX->HEAD[icell];
+
+		while(i != 0)
+		{
+			int ii = i - 1;
+			float rxi = ATOMS[ii].rxt1;
+			float ryi = ATOMS[ii].ryt1;
+
+			int j = BOX->LIST[i];
+			while(j != 0)
+			{
+				int jj = j - 1;
+				float dxij = ATOMS[jj].rxt1 - rxi;
+				float dyij = ATOMS[jj].ryt1 - ryi;
+
+				float r2ij = dxij*dxij + dyij*dyij;
+
+				if(r2ij <= rcut2)
+				{
+					float *pairs = INTERACTIONS -> get_forces(r2ij);
+
+					pe += pairs[0];
+
+					ATOMS[ii].fx += dxij * pairs[1];
+					ATOMS[jj].fx += -dxij * pairs[1];
+					ATOMS[ii].fy += dyij * pairs[1];
+					ATOMS[jj].fy += -dyij * pairs[1];
+
+					delete[] pairs;	
+				}
+
+				j = BOX->LIST[j];
+			}
+
+			i = BOX->LIST[i];
+		} 
+	}
+
+	int nNbors = 4;
+	for(int icell = 1; icell <= BOX->ncells; icell++)
+	{
+		int icell_index = nNbors*(icell - 1);
+
+		int i = BOX->HEAD[icell];
+		while(i != 0)
+		{
+			int ii = i - 1;
+			float rxi = ATOMS[ii].rxt1;
+			float ryi = ATOMS[ii].ryt1;
+
+			for(int nbor = 1; nbor <= nNbors; nbor++)
+			{
+				int jcell = BOX->MAPS[icell_index + nbor];
+
+				int j = BOX->HEAD[jcell];
+				while(j != 0)
+				{
+					int jj = j - 1;
+
+					float dxij = rxi - ATOMS[jj].rxt1;
+					float dyij = ryi - ATOMS[jj].ryt1;
+
+					BOX -> checkMinImage(&dxij, &dyij);
+
+					float r2ij = dxij*dxij + dyij*dyij;
+
+					if(r2ij <= rcut2)
+					{
+						float *pairs = INTERACTIONS -> get_forces(r2ij);
+
+						pe += pairs[0];
+
+						ATOMS[ii].fx += dxij * pairs[1];
+						ATOMS[jj].fx += -dxij * pairs[1];
+						ATOMS[ii].fy += dyij * pairs[1];
+						ATOMS[jj].fy += -dyij * pairs[1];
+
+						delete[] pairs;		
+					}
+
+					j = BOX->LIST[j];
+				}
+			}
+
+			i = BOX->LIST[i];
+		}
+	}
+
+	return(pe);
 }

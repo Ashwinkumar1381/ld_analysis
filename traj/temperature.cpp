@@ -1,0 +1,204 @@
+// temperature.cpp
+
+#include "analysis.h"
+#define NUM_THREADS 1
+
+using namespace analysis;
+
+void getVelocities(Trajectory *TRAJ, atom_style *ATOMS, System *BOX);
+float computeKineticTemperature(atom_style *ATOMS, System *BOX);
+float computeThermalTemperature(atom_style *ATOMS, System *BOX);
+
+int main(int argc, char *argv[])
+{
+	char *option = new char[20];
+	sprintf(option, "time_avg_traj");
+
+	/* -------- System Params -------- */
+	float Lx = 150.0, Ly = 30.0;
+	int nAtomTypes = 2;
+
+	/* -------- Trajectory Params -------- */
+	float dt = 5e-4;
+	int frameW = int(1e5);
+	int frameStart = int(4e4), frameEnd = int(5e4);
+
+	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe30/Data12/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe30/Data12/");
+
+	TRAJ -> openTrajectory();
+
+	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+
+	if(strcmp(option, "time_evolve_traj") == 0)
+	{
+		sprintf(TRAJ->fpathO, "%stemp.dat", TRAJ->fpathO);
+		TRAJ -> createOutputFile("step temp");
+
+		int ctr = 0;
+		while( !feof(TRAJ->fileI) )
+		{
+			TRAJ -> readThisFrame(ATOMS);
+
+			if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
+			{
+				float temp = computeKineticTemperature(ATOMS, BOX);
+				TRAJ -> write2file(temp);
+				
+				ctr++;
+			}
+
+			if(TRAJ->frame_nr == frameEnd)
+				break;
+		}
+
+		printf("Computed kinetic temperature for %d frames.\n", ctr);
+	}
+
+	if(strcmp(option, "time_avg_traj") == 0)
+	{
+		float min = 1e3, max = 0.0, avg = 0.0;
+
+		int ctr = 0;
+		while( !feof(TRAJ->fileI) )
+		{
+			TRAJ -> readThisFrame(ATOMS);
+
+			if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
+			{
+				float temp = computeKineticTemperature(ATOMS, BOX); 
+				avg += temp;
+
+				if(temp < min) min = temp;
+				if(temp > max) max = temp;
+
+				ctr++;
+			}
+
+			if(TRAJ->frame_nr == frameEnd)
+				break;
+		}
+
+		avg /= ctr;
+
+		printf("\nTemperature averaged over %d frames.\nMin Max Avg\n%f %f %f\n", ctr, min, max, avg);
+	}
+
+	else if(strcmp(option, "get_velocity_frame") == 0)
+	{
+		sprintf(TRAJ->fpathO, "%svelocities_frame%d.dat", TRAJ->fpathO, frameStart);
+
+		while( !feof(TRAJ->fileI) )
+		{
+			TRAJ -> readThisFrame(ATOMS);
+
+			if(TRAJ->frame_nr == frameStart)
+			{
+				getVelocities(TRAJ, ATOMS, BOX);
+
+				printf("Frame %d exported!\n", frameStart);	
+				exit(-1);	
+			}
+		}
+	}
+	
+	TRAJ -> closeTrajectory();
+
+	delete[] ATOMS;
+	delete TRAJ;
+	return(0);
+}
+
+void getVelocities(Trajectory *TRAJ, atom_style *ATOMS, System *BOX)
+{
+	TRAJ->fileO = fopen(TRAJ->fpathO, "w");
+	if(TRAJ->fileO == NULL)
+	{
+		printf("Cannot open file. exiting...");
+		exit(-1);
+	}
+	else
+		fprintf(TRAJ->fileO, "id type rx ry vx vy\n");
+
+	for(int i = 0; i < TRAJ->nAtoms; i++)
+		fprintf(TRAJ->fileO, "%d %d %g %g %g %g\n", i + 1, ATOMS[i].type, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy);
+
+	fclose(TRAJ->fileO);
+}
+
+float computeKineticTemperature(atom_style *ATOMS, System *BOX)
+{
+	float *vCom = new float[2];
+
+	for(int i = 0; i < 2; i++)
+		vCom[i] = 0.0;
+
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		vCom[0] += ATOMS[i].vx;
+		vCom[1] += ATOMS[i].vy; 
+	}
+
+	for(int i = 0; i < 2; i++)
+		vCom[i] /= BOX->nAtoms;
+
+	float sum = 0.0;
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		ATOMS[i].vxth = ATOMS[i].vx - vCom[0];
+		ATOMS[i].vyth = ATOMS[i].vy - vCom[1];
+		sum += ATOMS[i].vxth*ATOMS[i].vxth + ATOMS[i].vyth*ATOMS[i].vyth;
+	}
+
+	sum /= (2.0*BOX->nAtoms);
+	return(sum);
+}
+
+float computeThermalTemperature(atom_style *ATOMS, System *BOX)
+{
+	float **vCom = new float*[BOX->nAtomTypes];
+	for(int i = 0; i < BOX->nAtomTypes; i++)
+	{
+		vCom[i] = new float[2];
+		for(int j = 0; j < 2; j++)
+			vCom[i][j] = 0.0;
+	}
+
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		int type = ATOMS[i].type - 1;
+		vCom[type][0] += ATOMS[i].vx;
+		vCom[type][1] += ATOMS[i].vy;
+	}
+
+	for(int i = 0; i < BOX->nAtomTypes; i++)
+	{
+		for(int j = 0; j < 2; j++)
+		{
+			vCom[i][j] /= (BOX->nAtoms/BOX->nAtomTypes);
+		}
+	}
+
+	float ke = 0.0;
+
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		int ptype = ATOMS[i].type - 1;
+
+		ATOMS[i].vxth = ATOMS[i].vx - vCom[ptype][0];
+		ATOMS[i].vyth = ATOMS[i].vy - vCom[ptype][1];
+
+		ke += (ATOMS[i].vxth*ATOMS[i].vxth + ATOMS[i].vyth*ATOMS[i].vyth);
+	}
+
+	ke /= (2.0*BOX->nAtoms);
+	
+	return(ke);
+}
+
+void analysis::Trajectory::write2file(float temp)
+{
+	fprintf(fileO, "%ld %g\n", step, temp);
+}

@@ -4,9 +4,13 @@
 #define ANALYSIS_H
 
 #define MAXCELL 9000000
-#define rcut 1.122462048
+#define rcutoff 1.122462048
 
+#include "../../LD/LD-cpp/src/library.h"
+#include "../../LD/LD-cpp/src/interactions.h"
 #include "library.h"
+
+using namespace program;
 
 namespace analysis {
 
@@ -16,10 +20,11 @@ namespace analysis {
 
 	char id;
 	int type;
-	float rxt1, ryt1, rzt1; 		// *) Used in MSD calculations 
-	float rxt2, ryt2, rzt2; 
-	float vx, vy, vz;
-	float dx, dy, dz;
+	float rxt1, ryt1; 		// *) Used in MSD calculations 
+	float rxt2, ryt2; 
+	float vx, vy;
+	float vxth, vyth;
+	float fx, fy;
 	int jumpx, jumpy;
 
 	atomsXYZ();
@@ -33,17 +38,38 @@ namespace analysis {
 
 	float Lx, Ly, rcellx, rcelly;
 	int Ncellx, Ncelly, ncells;
-	int nAtoms;
+	int nAtoms, nAtomTypes;
 
 	int MAPS[MAXCELL], HEAD[MAXCELL], LIST[MAXCELL];
 
-	System(float Lx, float Ly, float nAtoms, float rcellx = rcut, float rcelly = rcut);
+	System(float Lx, float Ly, int nAtoms, int nAtomTypes, float rcellx = rcutoff, float rcelly = rcutoff);
 	~System();
 
 	int cellindex(int ix, int iy);
 	void buildCellMaps();
 	void buildCellList(atom_style *ATOMS);
 	void checkMinImage(float *dx = NULL, float *dy = NULL);
+
+	};
+
+	class velocityDist {
+
+	public:
+
+	int nDims, nBins;
+	float **Bins;
+	float *min_val;
+	float *max_val;
+	float *binW;
+	long *ctr;
+
+	velocityDist(int nDims = 2, int nBins = 0);
+	~velocityDist(){};
+
+	void createBins();
+	void scanVelocities(atom_style *ATOMS, int nAtoms);
+	void binVelocities(atom_style *ATOMS, int nAtoms);
+	void normalize();
 
 	};
 
@@ -96,17 +122,19 @@ namespace analysis {
 
 	char *fpathI, *fpathO, *pipeString, *pipeChar;
 	FILE *fileI, *fileO;
+	fpos_t curr_pos;
 
 	Trajectory(float timeStep = 1.0, int frameWidth = 1, char fileFormat[10] = "xyz");
 	~Trajectory();
 
 	void openTrajectory(bool count = false);
+	void createOutputFile(char line[] = "");
 	void closeTrajectory();
 	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);
 	void readNextFrame(atom_style *ATOMS);
-	void writeThisFrame(atom_style *ATOMS, long add_step = 0);
+	void writeThisFrame(atom_style *ATOMS, System *BOX, long add_step = 0);
 	void copyThisFrame(atom_style *From, atom_style *To);
 	void computeCom(atom_style *ATOMS);
 
@@ -121,7 +149,13 @@ namespace analysis {
 	void write2file(float ***RDFxy, int nRDFtypes, int nBins[]);
 	void write2file(float **Sk_x_y, float kx[], float ky[], int Nk[], int tag = 0);
 	void write2file(float **Hist, int nBins[]);
+	void write2file(float pe);
+	void write2file(velocityDist *Dist);
+	void write2file(float *power);
 	};
+
+	float computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS);
+	int bounds(float a);
 }
 
 #endif /*ANALYSIS_H*/

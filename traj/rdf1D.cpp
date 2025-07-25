@@ -1,9 +1,12 @@
-// computeRDF_1D.cpp
-// Calculates 1D full and partial pair distribution functions - g(x) and g(y)
-// Bins particles according to their longitudinal (x-) and lateral (y-) distances
-//
-// Date created  : 25.04.25
-// Last modified : 27.04.25
+/*
+	computeRDF_1D.cpp
+
+	Calculates 1D full and partial pair distribution functions - g(x) and g(y)
+	Bins particles according to their longitudinal (x-) and lateral (y-) distances
+
+	Date created  : 25.04.25
+	Last modified : 06.07.25
+*/
 
 #define PI 3.14159265359 
 #include "analysis.h"
@@ -16,10 +19,9 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 int main(int argc, char* argv[])
 {
 	// ---------- Trajectory params ----------
-	long eq_steps = long(0e7);
-	long startStep = long(8e7), endStep = long(10e7);
 	float dt = 5e-4;
-	int frameW = int(1e4);
+	int frameW = int(1e5);
+	int frameStart = int(4e4), frameEnd = int(5e4);
 
 	// ---------- System params ----------
 	int nAtomTypes = 2;
@@ -28,17 +30,17 @@ int main(int argc, char* argv[])
 
 	// ---------- RDF params ----------
 	float Rcut[2] = {10.0, 10.0};
-	char option[10] = "asymm";
+	char option[10] = "symm";
 	int Nbins[2] = {200, 200};
 
 	// ---------- Opening trajectory ----------
-	Trajectory *TRAJ = new Trajectory(dt, frameW);
-	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/cpp/Data6/traj2.xyz");
-	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/cpp/Data6/laneRDF_1D_%s.dat", option);
+	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe70/Data26/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe70/Data26/laneRDF_1D_%s.dat", option);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
 
 	// ---------- RDF initialization ----------
 	float binW[2] = {float(Rcut[0]/Nbins[0]), float(Rcut[1]/Nbins[1])};
@@ -57,10 +59,10 @@ int main(int argc, char* argv[])
 	{
 		TRAJ -> readThisFrame(ATOMS);
 
-		if(TRAJ->step >= (startStep + eq_steps) and TRAJ->step <= (endStep + eq_steps))
+		if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
 		{
 			ctr++;
-			printf("Processing step %ld, frame %d\n", TRAJ->step - eq_steps, ctr);
+			printf("Processing step %ld, frame %d\n", TRAJ->step, ctr);
 			computeRDF_1D(RDF_x_y, ATOMS, BOX, nRDFtypes, Rcut, binW, option);
 		}
 	}
@@ -139,6 +141,7 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 			{
 
 				// printf("Atom %d(%c) and %d(%c) are separated by dx=%f and dy=%f\n", i, ATOMS[i].id, j, ATOMS[j].id, dxij, dyij);
+
 				// ---------- Bins symmetric about origin ----------
 				if(strcmp(option, "symm") == 0)
 				{
@@ -267,14 +270,14 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 							{
 								if(ATOMS[i].id == 'N')
 								{
-									RDFx[2][bin_yi] += 1.0;
-									RDFx[3][bin_yj] += 1.0;	
+									RDFy[2][bin_yi] += 1.0;
+									RDFy[3][bin_yj] += 1.0;	
 								}
 
 								else if(ATOMS[i].id == 'O')
 								{
-									RDFx[3][bin_yi] += 1.0;
-									RDFx[2][bin_yj] += 1.0;
+									RDFy[3][bin_yi] += 1.0;
+									RDFy[2][bin_yj] += 1.0;
 								}
 							}
 						}						
@@ -327,8 +330,6 @@ void analysis::Trajectory::write2file(float ***RDF_x_y, int nRDFtypes, int Nbins
 		for(int i = 0; i < Nbins[1]; i++)
 			fprintf(fileO, "%d %f %f %f %f %f %f\n", i + 1, yn[i], RDFy[0][i], RDFy[1][i], RDFy[2][i], RDFy[3][i], RDFy[4][i]);
 	}
-
-	fclose(fileO);
 
 	delete[] xn;
 	delete[] yn;

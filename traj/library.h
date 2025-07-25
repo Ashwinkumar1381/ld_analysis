@@ -12,6 +12,10 @@
 #include<filesystem>
 #include<math.h>
 
+#ifdef _OPENMP
+#include<omp.h>
+#endif
+
 using namespace std;
 
 #endif /*LIBRARY_H*/
