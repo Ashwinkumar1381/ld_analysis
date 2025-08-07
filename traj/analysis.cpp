@@ -4,7 +4,7 @@
 	Some utility classes to perform analysis on Trajectories
 
 	Date created  : 28.11.24
-	Last modified : 29.05.25
+	Last modified : 31.07.25
 */
 
 #include "analysis.h"
@@ -16,7 +16,7 @@ using namespace analysis;
 analysis::atomsXYZ::atomsXYZ()
 {
 	rxt1 = ryt1 = rxt2 = ryt2 = 0.0;
-	vx = vy = vxth = vyth = 0.0;
+	vx = vy = vz = vxth = vyth = 0.0;
 	fx = fy = 0.0;
 	jumpx = jumpy = 0;
 }
@@ -291,13 +291,22 @@ void analysis::Trajectory::createOutputFile(char line[])
 		fprintf(fileO, "%s", line);		
 }
 
-void analysis::Trajectory::closeTrajectory()
+void analysis::Trajectory::closeTrajectory(bool closeI, bool closeO)
 {
-	printf("\nClosing trajectory file.\n");
-	fclose(fileI);
+	if(closeI == true)
+	{
+		printf("\nClosing input trajectory file.\n");
+		fclose(fileI);
+	}
 
-	if(fileO != NULL)
-		fclose(fileO);
+	if(closeO == true)
+	{
+		if(fileO != NULL)
+		{
+			printf("\nClosing output file.\n");
+			fclose(fileO);	
+		}
+	}
 }
 
 void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
@@ -490,111 +499,4 @@ int analysis::bounds(float a)
 
 	int b = int(a) - sign*(int(sign*a)%d) + sign*d;
 	return(b);
-}
-
-float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS)
-{
-	float rcut2 = INTERACTIONS->rcut * INTERACTIONS->rcut;
-
-	for(int i = 0; i < BOX->nAtoms; i++)
-	{
-		ATOMS[i].fx = 0.0;
-		ATOMS[i].fy = 0.0;
-	}
-
-	float pe = 0.0;
-	
-	BOX -> buildCellList(ATOMS);
-
-	for(int icell = 1; icell <= BOX->ncells; icell++)
-	{
-		int i = BOX->HEAD[icell];
-
-		while(i != 0)
-		{
-			int ii = i - 1;
-			float rxi = ATOMS[ii].rxt1;
-			float ryi = ATOMS[ii].ryt1;
-
-			int j = BOX->LIST[i];
-			while(j != 0)
-			{
-				int jj = j - 1;
-				float dxij = ATOMS[jj].rxt1 - rxi;
-				float dyij = ATOMS[jj].ryt1 - ryi;
-
-				float r2ij = dxij*dxij + dyij*dyij;
-
-				if(r2ij <= rcut2)
-				{
-					float *pairs = INTERACTIONS -> get_forces(r2ij);
-
-					pe += pairs[0];
-
-					ATOMS[ii].fx += dxij * pairs[1];
-					ATOMS[jj].fx += -dxij * pairs[1];
-					ATOMS[ii].fy += dyij * pairs[1];
-					ATOMS[jj].fy += -dyij * pairs[1];
-
-					delete[] pairs;	
-				}
-
-				j = BOX->LIST[j];
-			}
-
-			i = BOX->LIST[i];
-		} 
-	}
-
-	int nNbors = 4;
-	for(int icell = 1; icell <= BOX->ncells; icell++)
-	{
-		int icell_index = nNbors*(icell - 1);
-
-		int i = BOX->HEAD[icell];
-		while(i != 0)
-		{
-			int ii = i - 1;
-			float rxi = ATOMS[ii].rxt1;
-			float ryi = ATOMS[ii].ryt1;
-
-			for(int nbor = 1; nbor <= nNbors; nbor++)
-			{
-				int jcell = BOX->MAPS[icell_index + nbor];
-
-				int j = BOX->HEAD[jcell];
-				while(j != 0)
-				{
-					int jj = j - 1;
-
-					float dxij = rxi - ATOMS[jj].rxt1;
-					float dyij = ryi - ATOMS[jj].ryt1;
-
-					BOX -> checkMinImage(&dxij, &dyij);
-
-					float r2ij = dxij*dxij + dyij*dyij;
-
-					if(r2ij <= rcut2)
-					{
-						float *pairs = INTERACTIONS -> get_forces(r2ij);
-
-						pe += pairs[0];
-
-						ATOMS[ii].fx += dxij * pairs[1];
-						ATOMS[jj].fx += -dxij * pairs[1];
-						ATOMS[ii].fy += dyij * pairs[1];
-						ATOMS[jj].fy += -dyij * pairs[1];
-
-						delete[] pairs;		
-					}
-
-					j = BOX->LIST[j];
-				}
-			}
-
-			i = BOX->LIST[i];
-		}
-	}
-
-	return(pe);
 }

@@ -22,7 +22,7 @@ namespace analysis {
 	int type;
 	float rxt1, ryt1; 		// *) Used in MSD calculations 
 	float rxt2, ryt2; 
-	float vx, vy;
+	float vx, vy, vz;
 	float vxth, vyth;
 	float fx, fy;
 	int jumpx, jumpy;
@@ -129,7 +129,7 @@ namespace analysis {
 
 	void openTrajectory(bool count = false);
 	void createOutputFile(char line[] = "");
-	void closeTrajectory();
+	void closeTrajectory(bool closeI = true, bool closeO = true);
 	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);

@@ -5,85 +5,114 @@
 using namespace program;
 using namespace analysis;
 
-float computePotentialEnergy(Trajectory *TRAJ, atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS);
+namespace analysis {
 
-int main(int argc, char *argv[])
-{
-	// System Params
-	float Lx = 150.0, Ly = 30.0;
-	int nAtomTypes = 2;
-
-	// Trajectory Params
-	int frameStart = int(1e3), frameEnd = int(1e3); 
-	float dt = 5e-4;
-	int frameW = int(1e5);
-
-	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data38/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data38/energy.dat");
-	TRAJ -> openTrajectory();
-
-	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
-	WCA_2P *INTERACTIONS = new WCA_2P(); 
-
-	TRAJ -> createOutputFile("step PotEng");
-	while( !feof(TRAJ->fileI) )
-	{
-		TRAJ -> readThisFrame(ATOMS);
-
-		if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
-		{
-			printf("Processing frame %d\n", TRAJ->frame_nr);
-			float pe = computePotentialEnergy(TRAJ, ATOMS, BOX, INTERACTIONS);
-			printf("\nPE = %f", pe);
-			// TRAJ -> write2file(pe);
-		}
-
-		if(TRAJ->frame_nr == frameEnd)
-			break;
-	}
-
-	TRAJ -> closeTrajectory();
-	return(0);
+	float computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS);
 }
 
-float computePotentialEnergy(Trajectory *TRAJ, atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS)
+float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS)
 {
-	float pe_total = 0.0;
+	float rcut2 = INTERACTIONS->rcut * INTERACTIONS->rcut;
 
-	#pragma omp parallel num_threads(6)
+	for(int i = 0; i < BOX->nAtoms; i++)
 	{
-		float pe = 0.0;
+		ATOMS[i].fx = 0.0;
+		ATOMS[i].fy = 0.0;
+	}
 
-		#pragma omp for
-		for(int i = 0; i < TRAJ->nAtoms; i++)
+	float pe = 0.0;
+	
+	BOX -> buildCellList(ATOMS);
+
+	for(int icell = 1; icell <= BOX->ncells; icell++)
+	{
+		int i = BOX->HEAD[icell];
+
+		while(i != 0)
 		{
-			for(int j = i + 1; j < TRAJ->nAtoms; j++)
+			int ii = i - 1;
+			float rxi = ATOMS[ii].rxt1;
+			float ryi = ATOMS[ii].ryt1;
+
+			int j = BOX->LIST[i];
+			while(j != 0)
 			{
-				float dxij = ATOMS[j].rxt1 - ATOMS[i].rxt1;
-				float dyij = ATOMS[j].ryt1 - ATOMS[i].ryt1;
+				int jj = j - 1;
+				float dxij = ATOMS[jj].rxt1 - rxi;
+				float dyij = ATOMS[jj].ryt1 - ryi;
 
-				BOX -> checkMinImage(&dxij, &dyij);
+				float r2ij = dxij*dxij + dyij*dyij;
 
-				float drij2 = dxij*dxij + dyij*dyij;
-
-				if(drij2 < INTERACTIONS->rcut*INTERACTIONS->rcut)
+				if(r2ij <= rcut2)
 				{
-					float *energies = INTERACTIONS->get_forces(drij2);
-					pe += energies[0];
+					float *pairs = INTERACTIONS -> get_forces(r2ij);
+
+					pe += pairs[0];
+
+					ATOMS[ii].fx += dxij * pairs[1];
+					ATOMS[jj].fx += -dxij * pairs[1];
+					ATOMS[ii].fy += dyij * pairs[1];
+					ATOMS[jj].fy += -dyij * pairs[1];
+
+					delete[] pairs;	
+				}
+
+				j = BOX->LIST[j];
+			}
+
+			i = BOX->LIST[i];
+		} 
+	}
+
+	int nNbors = 4;
+	for(int icell = 1; icell <= BOX->ncells; icell++)
+	{
+		int icell_index = nNbors*(icell - 1);
+
+		int i = BOX->HEAD[icell];
+		while(i != 0)
+		{
+			int ii = i - 1;
+			float rxi = ATOMS[ii].rxt1;
+			float ryi = ATOMS[ii].ryt1;
+
+			for(int nbor = 1; nbor <= nNbors; nbor++)
+			{
+				int jcell = BOX->MAPS[icell_index + nbor];
+
+				int j = BOX->HEAD[jcell];
+				while(j != 0)
+				{
+					int jj = j - 1;
+
+					float dxij = rxi - ATOMS[jj].rxt1;
+					float dyij = ryi - ATOMS[jj].ryt1;
+
+					BOX -> checkMinImage(&dxij, &dyij);
+
+					float r2ij = dxij*dxij + dyij*dyij;
+
+					if(r2ij <= rcut2)
+					{
+						float *pairs = INTERACTIONS -> get_forces(r2ij);
+
+						pe += pairs[0];
+
+						ATOMS[ii].fx += dxij * pairs[1];
+						ATOMS[jj].fx += -dxij * pairs[1];
+						ATOMS[ii].fy += dyij * pairs[1];
+						ATOMS[jj].fy += -dyij * pairs[1];
+
+						delete[] pairs;		
+					}
+
+					j = BOX->LIST[j];
 				}
 			}
-		}
 
-		#pragma omp critical
-		pe_total = pe_total + pe;		
+			i = BOX->LIST[i];
+		}
 	}
 
-	return(pe_total);
-}
-
-void analysis::Trajectory::write2file(float pe)
-{
-	fprintf(fileO, "%ld %f\n", step, pe);
+	return(pe);
 }

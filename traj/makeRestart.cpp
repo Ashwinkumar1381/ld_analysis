@@ -5,7 +5,7 @@
 	from a .cfg file or just coordinates from a .xyz file  
 
 	Date created  : 05.05.25
-	Last modified : 29.05.25
+	Last modified : 31.07.25
 */
 
 #include "analysis.h"
@@ -17,75 +17,63 @@ int main(int argc, char* argv[])
 	// ---------- System Params ----------
 	float Lx = 150.0, Ly = 30.0;
 	int nAtomTypes = 2;
-	char typeLabels[2] = {'N', 'O'};
+	char typeLabels[2] = {'O', 'N'};
 
 	// ---------- Trajectory Params ----------
 	float dt = 5e-4;
-	int frameW = int(1e2);
+	int frameW = int(1e3);
 	long eqStep = long(1e7);
-	long chooseStep = long(8e9);
+	long chooseStep = long(3e9);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data30/frames/frame.10010000000.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/One Touch/ashwin_md/lane/May2025/lmp/Data30/lane.10010000000.res");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data59/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data59/lane.3010000000.res");
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ -> nAtoms]; 
 
-	if(strcmp(TRAJ->format, "xyz") == 0)
-	{
-		while( !feof(TRAJ -> fileI) )
-		{
-			TRAJ -> readThisFrame(ATOMS);
-
-			if(TRAJ -> step == (eqStep + chooseStep))
-			{
-				printf("Step %ld extracted for restart simulations\n", TRAJ->step);
-				break;
-			}
-		}	
-	}
-
-	else if(strcmp(TRAJ->format, "cfg") == 0)
+	while( !feof(TRAJ -> fileI) )
 	{
 		TRAJ -> readThisFrame(ATOMS);
-		printf("Step %ld extracted for restart simulations\n", TRAJ->step);
-	}
 
-	TRAJ -> closeTrajectory();
+		if(TRAJ -> step == (eqStep + chooseStep))
+		{
+			printf("Step %ld extracted for restart simulations\n", TRAJ->step);
+			break;
+		}
+	}	
 
-	remove(TRAJ->fpathO);
-	TRAJ->fileO = fopen(TRAJ->fpathO, "w");
+	TRAJ -> createOutputFile("");
 
-	fprintf(TRAJ->fileO, "makeRestart.cpp : LAMMPS data file for restart simulation generated using %ld step from trajectory file %s\n\n", TRAJ->step, TRAJ->fpathI);
+	fprintf(TRAJ->fileO, "makeRestart.cpp : LAMMPS data file for restart simulation generated using %ld step from trajectory file %s\n", TRAJ->step, TRAJ->fpathI);
 
-	fprintf(TRAJ->fileO, "%d atoms\n", TRAJ->nAtoms);
-	fprintf(TRAJ->fileO, "%f %f xlo xhi\n", 0.0, Lx);
-	fprintf(TRAJ->fileO, "%f %f ylo yhi\n", 0.0, Ly);
-	fprintf(TRAJ->fileO, "%d atom types\n\n", nAtomTypes);
+	fprintf(TRAJ->fileO, "\n%d atoms", TRAJ->nAtoms);
+	fprintf(TRAJ->fileO, "\n%f %f xlo xhi", 0.0, Lx);
+	fprintf(TRAJ->fileO, "\n%f %f ylo yhi", 0.0, Ly);
+	fprintf(TRAJ->fileO, "\n%d atom types\n", nAtomTypes);
 	
-	fprintf(TRAJ->fileO, "Atom Type Labels\n\n");
+	fprintf(TRAJ->fileO, "\nAtom Type Labels\n");
 
 	for(int i = 0; i < nAtomTypes; i++)
-		fprintf(TRAJ->fileO, "%d %c\n", i + 1, typeLabels[i]);
+		fprintf(TRAJ->fileO, "\n%d %c", i + 1, typeLabels[i]);
 
-	fprintf(TRAJ->fileO, "\nMasses\n\n");
+	fprintf(TRAJ->fileO, "\n\nMasses\n");
 
 	for(int i = 0; i < nAtomTypes; i++)
-		fprintf(TRAJ->fileO, "%d %f\n", i + 1, 1.0);
+		fprintf(TRAJ->fileO, "\n%d %f", i + 1, 1.0);
 
-	fprintf(TRAJ->fileO, "\nAtoms # atomic\n\n");
+	fprintf(TRAJ->fileO, "\n\nAtoms # atomic\n");
 
 	for(int i = 0; i < TRAJ->nAtoms; i++)
-		fprintf(TRAJ->fileO, "%d %c %f %f %f\n", i + 1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, 0.0);
+		fprintf(TRAJ->fileO, "\n%d %c %f %f %f", i + 1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, 0.0);
 
 	if(strcmp(TRAJ->format, "cfg") == 0)
 	{
-		fprintf(TRAJ->fileO, "\nVelocities # atomic\n\n");
+		fprintf(TRAJ->fileO, "\n\nVelocities # atomic\n");
 
 		for(int i = 0; i < TRAJ->nAtoms; i++)
-			fprintf(TRAJ->fileO, "%d %f %f %f\n", i + 1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].vz);
+			fprintf(TRAJ->fileO, "\n%d %f %f %f", i + 1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].vz);
 	}
 	
-	fclose(TRAJ->fileO);
+	TRAJ -> closeTrajectory();
 }

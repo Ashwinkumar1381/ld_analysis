@@ -12,7 +12,7 @@ float computeThermalTemperature(atom_style *ATOMS, System *BOX);
 int main(int argc, char *argv[])
 {
 	char *option = new char[20];
-	sprintf(option, "time_avg_traj");
+	sprintf(option, "time_evolve_traj");
 
 	/* -------- System Params -------- */
 	float Lx = 150.0, Ly = 30.0;
@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
 	int frameStart = int(4e4), frameEnd = int(5e4);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe30/Data12/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe30/Data12/");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data58/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data58/");
 
 	TRAJ -> openTrajectory();
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	TRAJ -> closeTrajectory();
+	TRAJ -> closeTrajectory(true, true);
 
 	delete[] ATOMS;
 	delete TRAJ;
@@ -200,5 +200,5 @@ float computeThermalTemperature(atom_style *ATOMS, System *BOX)
 
 void analysis::Trajectory::write2file(float temp)
 {
-	fprintf(fileO, "%ld %g\n", step, temp);
+	fprintf(fileO, "\n%ld %g", step, temp);
 }

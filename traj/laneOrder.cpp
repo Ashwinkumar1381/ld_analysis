@@ -38,11 +38,11 @@ int main(int argc, char*argv[])
 	int Nevery = 1;						// Obtain Nsample frames at intervals of Nevery before the current frame whose average we desire to compute 
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data48/traj2.cfg");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data57/traj2.cfg");
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
-		sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data48/laneOrder.dat");
+		sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data57/laneOrder.dat");
 
 		TRAJ -> openTrajectory();
 		TRAJ -> createOutputFile("step order");
@@ -353,5 +353,5 @@ float computeLaneOrder2B(atom_style *ATOMS, System *BOX, float acut)
 
 void analysis::Trajectory::write2file(float time, float order, int option)
 {
-	fprintf(fileO, "%ld %f\n", step, order);
+	fprintf(fileO, "\n%ld %f", step, order);
 }
