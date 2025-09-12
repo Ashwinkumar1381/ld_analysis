@@ -12,7 +12,7 @@
 
 using namespace analysis;
 
-float** computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int N);
+void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int nSample);
 
 int main(int argc, char *argv[])
 {
@@ -21,77 +21,70 @@ int main(int argc, char *argv[])
 	int nAtomTypes = 2;
 
 	// ----------- Trajectory Params -----------
-	int frameStart = int(0), frameEnd = int(2000);
-	float dt = 5e-4;
+	int frameStart = int(4e4), frameEnd = int(5e4);
+	float dt = 5e-5;
 	int frameW = int(1e5);
-	int sep = 1;
 
-	int nSample = 100;
-	int *delFrames = new int[nSample];
-	for(int i = 0; i < nSample; i++)
-		delFrames[i] = int(i + 1);
+	int nSample = 36;
 
-	Trajectory *TRAJ = new Trajectory(dt, frameW);
-	sprintf(TRAJ -> fpathI, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data26/traj3.xyz");
-	sprintf(TRAJ -> fpathO, "//media/ashwin/One Touch/ashwin_md/lane/Apr2025/lmp/Data26/msd.dat");
+	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
+	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data37/traj2.cfg");
+	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data37/msd.dat");
 	TRAJ -> openTrajectory();
-	TRAJ -> nAtomTypes = nAtomTypes;
 
-	for(int i = 0; i < nSample; i++) 
-		delFrames[i] = int(delFrames[i] * sep);
+	int *delFrames = new int[nSample];
+
+	int ctr = 0, j = 0;
+	for(int i = 0; i < nSample; i++)
+	{
+		j++;
+		delFrames[i] = int(j * pow(10, ctr));
+ 		
+ 		if(j % 9 == 0)
+		{
+			j = 0;
+			ctr++;
+		}
+	}
 
 	TRAJ->totalFrames = frameEnd - frameStart + 1;
 
 	atom_style **ATOMS = new atom_style* [TRAJ->totalFrames];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
 	for(int i = 0; i < TRAJ->totalFrames; i++) 
 		ATOMS[i] = new atom_style [TRAJ->nAtoms];
 
 	TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd); 
-	float **meanSquaredDisplacement = computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, delFrames, nSample);
+	computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, delFrames, nSample);
 
-	TRAJ -> write2file(meanSquaredDisplacement, delFrames, nSample);
-	TRAJ -> closeTrajectory();
+	TRAJ -> closeTrajectory(true, true);
 
 	delete[] ATOMS; 
 	return(0);
 }
 
-float** computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int N)
+void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int nSample)
 {
 	printf("\nComputing MSD...\n");
 
-	float ***MSD = new float**[TRAJ->nAtomTypes];
-	int **numSamples = new int*[TRAJ->nAtomTypes];
+	float **MSD = new float*[4];
+	int *count = new int[nSample];
 
-	for(int i = 0; i < TRAJ->nAtomTypes; i++)
+	for(int i = 0; i < 4; i++)
 	{
-		MSD[i] = new float*[5];
-		for(int j = 0; j < 5; j++)
-		{
-			MSD[i][j] = new float[N];
-			for(int k = 0; k < N; k++)
-				MSD[i][j][k] = 0.0;
-		}
-
-		numSamples[i] = new int[N];
-		for(int k = 0; k < N; k++)
-			numSamples[i][k] = 0;
+		MSD[i] = new float[nSample];
+		for(int j = 0; j < nSample; j++)
+			MSD[i][j] = 0.0;
 	}
 
-	float **meanSquaredDisplacement = new float*[5];
-	for(int i = 0; i < 5; i++)
-	{
-		meanSquaredDisplacement[i] = new float[N];
-		for(int j = 0; j < N; j++)
-			meanSquaredDisplacement[i][j] = 0.0;
-	}
+	for(int j = 0; j < nSample; j++)
+		count[j] = 0;
 
 	for(int currFrame = 0; currFrame < TRAJ -> totalFrames; currFrame++)
 	{
 		int ctr = 0;
 
-		while(ctr < N)
+		while(ctr < nSample)
 		{
 			int nextFrame = currFrame + delFrames[ctr];
 			
@@ -102,19 +95,14 @@ float** computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style
 					float dx = ATOMS[nextFrame][j].rxt1 - ATOMS[currFrame][j].rxt1 + BOX->Lx*(ATOMS[nextFrame][j].jumpx - ATOMS[currFrame][j].jumpx);
 					float dy = ATOMS[nextFrame][j].ryt1 - ATOMS[currFrame][j].ryt1 + BOX->Ly*(ATOMS[nextFrame][j].jumpy - ATOMS[currFrame][j].jumpy);
 					float dx2 = dx*dx;
-					float dxdy = abs(dx*dy);
 					float dy2 = dy*dy;
+					float dxdy = abs(dx)*abs(dy);
 
-					int pid = 0;
-					if(ATOMS[nextFrame][j].id == 'N') pid = 0;
-					else if(ATOMS[nextFrame][j].id == 'O') pid = 1;
-
-					MSD[pid][0][ctr] += (dx2 + dy2);
-					MSD[pid][1][ctr] += dx2;
-					MSD[pid][2][ctr] += dxdy;
-					MSD[pid][3][ctr] += dxdy;
-					MSD[pid][4][ctr] += dy2;
-					numSamples[pid][ctr] += 1;
+					MSD[0][ctr] += (dx2 + dy2);
+					MSD[1][ctr] += dx2;
+					MSD[2][ctr] += dy2;
+					MSD[3][ctr] += dxdy;
+					count[ctr] += 1;
 				}
 			}
 
@@ -122,37 +110,18 @@ float** computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style
 		}
 	}
 
-	for(int i = 0; i < N; i++)
+	for(int i = 0; i < nSample; i++)
 	{
-		for(int j = 0; j < 5; j++)
-		{
-			MSD[0][j][i] /= numSamples[0][i];
-			MSD[1][j][i] /= numSamples[1][i];	
-			meanSquaredDisplacement[j][i] = 0.5*(MSD[0][j][i] + MSD[1][j][i]);
-		}
-
-		// printf("A: %d %d %f %f %f %f %f %d\n", i, delFrames[i], MSD[0][0][i], MSD[0][1][i], MSD[0][2][i], MSD[0][3][i], MSD[0][4][i], numSamples[0][i]);
-		// printf("B: %d %d %f %f %f %f %f %d\n\n", i, delFrames[i], MSD[1][0][i], MSD[1][1][i], MSD[1][2][i], MSD[1][3][i], MSD[1][4][i], numSamples[1][i]);
+		for(int j = 0; j < 4; j++)
+			MSD[j][i] /= count[i];
 	}
 
-	return(meanSquaredDisplacement);
+	TRAJ -> createOutputFile("time count MSD_all MSD_xx MSD_yy MSD_xy");
+	TRAJ -> write2file(MSD, count, delFrames, nSample);
 }
 
-void analysis::Trajectory::write2file(float **MSD, int *delFrames, int nSample)
+void analysis::Trajectory::write2file(float **MSD, int *count, int *delFrames, int nSample)
 {
-	remove(fpathO);
-
-	fileO = fopen(fpathO, "w");
-	if(fileO == NULL)
-	{
-		printf("Error. Cannot create new file %s. Exiting...\n", fpathO);
-		exit(-1);
-	}
-	else
-		fprintf(fileO, "time MSD_all MSD_xx MSD_xy MSD_yx MSD_yy\n");
-
 	for(int i = 0; i < nSample; i++)
-		fprintf(fileO, "%f %f %f %f %f %f\n", frameWidth*delFrames[i]*timeStep, MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i], MSD[4][i]);	
-
-	fclose(fileO);
+		fprintf(fileO, "\n%d %d %g %g %g %g", int(delFrames[i]*frameWidth*timeStep), count[i], MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i]);
 }

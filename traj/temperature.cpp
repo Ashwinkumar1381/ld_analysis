@@ -6,7 +6,7 @@
 using namespace analysis;
 
 void getVelocities(Trajectory *TRAJ, atom_style *ATOMS, System *BOX);
-float computeKineticTemperature(atom_style *ATOMS, System *BOX);
+float* computeKineticTemperature(atom_style *ATOMS, System *BOX);
 float computeThermalTemperature(atom_style *ATOMS, System *BOX);
 
 int main(int argc, char *argv[])
@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
 	int frameStart = int(4e4), frameEnd = int(5e4);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data58/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data58/");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/");
 
 	TRAJ -> openTrajectory();
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
 		sprintf(TRAJ->fpathO, "%stemp.dat", TRAJ->fpathO);
-		TRAJ -> createOutputFile("step temp");
+		TRAJ -> createOutputFile("step temp temp_x temp_y");
 
 		int ctr = 0;
 		while( !feof(TRAJ->fileI) )
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
 			if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
 			{
-				float temp = computeKineticTemperature(ATOMS, BOX);
+				float *temp = computeKineticTemperature(ATOMS, BOX);
 				TRAJ -> write2file(temp);
 				
 				ctr++;
@@ -68,11 +68,11 @@ int main(int argc, char *argv[])
 
 			if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
 			{
-				float temp = computeKineticTemperature(ATOMS, BOX); 
-				avg += temp;
+				float *temp = computeKineticTemperature(ATOMS, BOX); 
+				avg += temp[0];
 
-				if(temp < min) min = temp;
-				if(temp > max) max = temp;
+				if(temp[0] < min) min = temp[0];
+				if(temp[0] > max) max = temp[0];
 
 				ctr++;
 			}
@@ -128,7 +128,7 @@ void getVelocities(Trajectory *TRAJ, atom_style *ATOMS, System *BOX)
 	fclose(TRAJ->fileO);
 }
 
-float computeKineticTemperature(atom_style *ATOMS, System *BOX)
+float* computeKineticTemperature(atom_style *ATOMS, System *BOX)
 {
 	float *vCom = new float[2];
 
@@ -144,16 +144,30 @@ float computeKineticTemperature(atom_style *ATOMS, System *BOX)
 	for(int i = 0; i < 2; i++)
 		vCom[i] /= BOX->nAtoms;
 
-	float sum = 0.0;
 	for(int i = 0; i < BOX->nAtoms; i++)
 	{
 		ATOMS[i].vxth = ATOMS[i].vx - vCom[0];
 		ATOMS[i].vyth = ATOMS[i].vy - vCom[1];
-		sum += ATOMS[i].vxth*ATOMS[i].vxth + ATOMS[i].vyth*ATOMS[i].vyth;
 	}
 
-	sum /= (2.0*BOX->nAtoms);
-	return(sum);
+	float *temp = new float[3];
+	for(int i = 0; i < 3; i++)
+		temp[i] = 0.0;
+
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		float vx2 = ATOMS[i].vxth*ATOMS[i].vxth;
+		float vy2 = ATOMS[i].vyth*ATOMS[i].vyth;
+		temp[0] += vx2 + vy2;
+		temp[1] += vx2;
+		temp[2] += vy2;
+	}
+
+	temp[0] /= (2.0*BOX->nAtoms);
+	temp[1] /= (BOX->nAtoms);
+	temp[2] /= (BOX->nAtoms);
+	
+	return(temp);
 }
 
 float computeThermalTemperature(atom_style *ATOMS, System *BOX)
@@ -198,7 +212,7 @@ float computeThermalTemperature(atom_style *ATOMS, System *BOX)
 	return(ke);
 }
 
-void analysis::Trajectory::write2file(float temp)
+void analysis::Trajectory::write2file(float *temp)
 {
-	fprintf(fileO, "\n%ld %g", step, temp);
+	fprintf(fileO, "\n%ld %g %g %g", step, temp[0], temp[1], temp[2]);
 }

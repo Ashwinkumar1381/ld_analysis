@@ -21,13 +21,13 @@ int main(int argc, char* argv[])
 
 	// ---------- Trajectory Params ----------
 	float dt = 5e-4;
-	int frameW = int(1e3);
+	int frameW = int(1e5);
 	long eqStep = long(1e7);
-	long chooseStep = long(3e9);
+	long chooseStep = long(248e7);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data59/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data59/lane.3010000000.res");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd80/tau_5e-1/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd80/tau_5e-1/lane.%ld.res", eqStep + chooseStep);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ -> nAtoms]; 

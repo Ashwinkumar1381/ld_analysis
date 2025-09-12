@@ -28,7 +28,7 @@ int main(int argc, char*argv[])
 	// System params
 	int nAtomTypes = 2;
 	float Lx = 150.0, Ly = 30.0; 
-	float slabW = 1.0;
+	float slabW = 0.5;
 	float rho = 0.45;
 	float acut = 1.0/sqrt(rho);
 
@@ -38,11 +38,11 @@ int main(int argc, char*argv[])
 	int Nevery = 1;						// Obtain Nsample frames at intervals of Nevery before the current frame whose average we desire to compute 
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data57/traj2.cfg");
+	sprintf(TRAJ->fpathI, "/media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/traj2.cfg");
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
-		sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe100/Data57/laneOrder.dat");
+		sprintf(TRAJ->fpathO, "/media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/laneOrder.dat");
 
 		TRAJ -> openTrajectory();
 		TRAJ -> createOutputFile("step order");
@@ -214,7 +214,12 @@ float computeLaneOrder1(atom_style *ATOMS, System *BOX, float slabW_y)
 
 	float order = 0.0;
 	for(int i = 0; i < nBins; i++)
-		order += abs(phi[i] / bin_ctr[i]);
+	{
+		if(bin_ctr[i] != 0)
+			order += abs(phi[i] / bin_ctr[i]);
+		else
+			order += 0.0;
+	}
 
 	return(order/nBins);
 }

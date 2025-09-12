@@ -3,7 +3,7 @@
  Performs the power balance on a set of particle configurations
 
  Date created  : 21.07.25
- Last modified : 21.07.25 
+ Last modified : 21.08.25 
  
 */
 
@@ -12,7 +12,7 @@
 using namespace analysis;
 using namespace program;
 
-float *computePowerDistribution(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS, float Fd, float tau);
+float *computePowerDistribution(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS, float Fd, float tau, char compute_option[5] = "full");
 
 int main(int argc, char* argv[])
 {
@@ -24,16 +24,16 @@ int main(int argc, char* argv[])
 	// ---------- System Params ----------
 	float Lx = 150.0, Ly = 30.0;
 	int nAtomTypes = 2;
-	float Fd = 90.0;
-	float tau = 2.0;
+	float Fd = 100.0;
+	float tau = 1e0;
 
 	char *option = new char[20];
 	sprintf(option, "time_evolve_traj");
 	// sprintf(option, "time_avg_traj");
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data48/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data48/power.dat");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/power_x.dat");
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
-		TRAJ -> createOutputFile("step Wext Qdiss Qint Epot");
+		TRAJ -> createOutputFile("step Wext Qdiss Qint Wfluc");
 
 		int ctr = 0;
 		while( !feof(TRAJ->fileI) )
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 			{
 				printf("\nProcessing frame %d", TRAJ->frame_nr);
 
-				float *power = computePowerDistribution(ATOMS, BOX, INTERACTIONS, Fd, tau);
+				float *power = computePowerDistribution(ATOMS, BOX, INTERACTIONS, Fd, tau, "x");
 				TRAJ -> write2file(power);
 				ctr++;
 
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
 	else if(strcmp(option, "time_avg_traj") == 0)
 	{
-		float power_avg[3];
+		float power_avg[4];
 
 		int ctr = 0;
 		while( !feof(TRAJ->fileI) )
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
 			if(TRAJ->frame_nr == frameStart)
 			{
-				for(int i = 0; i < 3; i++)
+				for(int i = 0; i < 4; i++)
 					power_avg[i] = 0.0;
 			}
 
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 			{
 				float *power = computePowerDistribution(ATOMS, BOX, INTERACTIONS, Fd, tau);
 
-				for(int i = 0; i < 3; i++)
+				for(int i = 0; i < 4; i++)
 					power_avg[i] += power[i];
 
 				ctr++;
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 
 			if(TRAJ->frame_nr == frameEnd)
 			{
-				for(int i = 0; i < 3; i++)
+				for(int i = 0; i < 4; i++)
 					power_avg[i] /= ctr;
 
 				break;
@@ -107,25 +107,59 @@ int main(int argc, char* argv[])
 
 		}
 
-		printf("\n\nAveraged Power Statistics: %g %g %g", power_avg[0], power_avg[1], power_avg[2]);
+		printf("\n\nAveraged Power Statistics: %g %g %g %g", power_avg[0], power_avg[1], power_avg[2], power_avg[3]);
 	}
 
 	TRAJ -> closeTrajectory();
 }
 
-float *computePowerDistribution(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS, float Fd, float tau)
+float *computePowerDistribution(atom_style *ATOMS, System *BOX, WCA_2P *INTERACTIONS, float Fd, float tau, char compute_option[5])
 {
-	float Wext = 0.0, Qdiss = 0.0, Qint = 0.0;
-
 	float pe = computeNonBondedInteractions(ATOMS, BOX, INTERACTIONS);
+
+	float Vxcom = 0.0, Vycom = 0.0;
+	for(int i = 0; i < BOX->nAtoms; i++)
+	{
+		Vxcom += ATOMS[i].vx;
+		Vycom += ATOMS[i].vy; 
+	}
+
+	Vxcom /= (BOX->nAtoms);
+	Vycom /= (BOX->nAtoms);
 
 	for(int i = 0; i < BOX->nAtoms; i++)
 	{
-		if(ATOMS[i].id == 'O') Wext += ATOMS[i].vx * Fd;
-		else if(ATOMS[i].id == 'N') Wext += ATOMS[i].vx * (-1.0 * Fd);
+		ATOMS[i].vxth = ATOMS[i].vx - Vxcom;
+		ATOMS[i].vyth = ATOMS[i].vy - Vycom;
+	}
 
-		Qdiss += (ATOMS[i].vx * ATOMS[i].vx + ATOMS[i].vy * ATOMS[i].vy) / tau;
-		Qint += (ATOMS[i].vx * ATOMS[i].fx + ATOMS[i].vy * ATOMS[i].fy);
+	float Wext = 0.0, Qdiss = 0.0, Qint = 0.0, Wfluc = 0.0;
+
+	if(strcmp(compute_option, "full") == 0)
+	{
+		for(int i = 0; i < BOX->nAtoms; i++)
+		{
+			float FBx = float(ATOMS[i].fx + ATOMS[i].vxth/tau - ATOMS[i].fx_int - Fd*ATOMS[i].si);
+			float FBy = float(ATOMS[i].fy + ATOMS[i].vyth/tau - ATOMS[i].fy_int);
+
+			Wext  += ATOMS[i].vxth*Fd*ATOMS[i].si;
+			Qdiss += (ATOMS[i].vxth*ATOMS[i].vxth + ATOMS[i].vyth*ATOMS[i].vyth)/tau;
+			Qint  += (ATOMS[i].vxth*ATOMS[i].fx_int + ATOMS[i].vyth*ATOMS[i].fy_int);
+			Wfluc += (ATOMS[i].vxth*FBx + ATOMS[i].vyth*FBy);
+		}	
+	}
+
+	else if(strcmp(compute_option, "x") == 0)
+	{
+		for(int i = 0; i < BOX->nAtoms; i++)
+		{
+			float FBx = float(ATOMS[i].fx + ATOMS[i].vxth/tau - ATOMS[i].fx_int - Fd*ATOMS[i].si);
+
+			Wext  += ATOMS[i].vxth*Fd*ATOMS[i].si;
+			Qdiss += (ATOMS[i].vxth*ATOMS[i].vxth)/tau;
+			Qint  += (ATOMS[i].vxth*ATOMS[i].fx_int);
+			Wfluc += (ATOMS[i].vxth*FBx);
+		}
 	}
 
 	float *power = new float[4];
@@ -133,7 +167,7 @@ float *computePowerDistribution(atom_style *ATOMS, System *BOX, WCA_2P *INTERACT
 	power[0] = Wext / BOX->nAtoms;
 	power[1] = Qdiss / BOX->nAtoms;
 	power[2] = -1.0 * Qint / BOX->nAtoms;
-	power[3] = pe;
+	power[3] = Wfluc / BOX->nAtoms;
 
 	return(power);
 }

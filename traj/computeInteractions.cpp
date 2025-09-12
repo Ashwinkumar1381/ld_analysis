@@ -16,8 +16,8 @@ float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA
 
 	for(int i = 0; i < BOX->nAtoms; i++)
 	{
-		ATOMS[i].fx = 0.0;
-		ATOMS[i].fy = 0.0;
+		ATOMS[i].fx_int = 0.0;
+		ATOMS[i].fy_int = 0.0;
 	}
 
 	float pe = 0.0;
@@ -49,10 +49,10 @@ float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA
 
 					pe += pairs[0];
 
-					ATOMS[ii].fx += dxij * pairs[1];
-					ATOMS[jj].fx += -dxij * pairs[1];
-					ATOMS[ii].fy += dyij * pairs[1];
-					ATOMS[jj].fy += -dyij * pairs[1];
+					ATOMS[ii].fx_int += dxij * pairs[1];
+					ATOMS[jj].fx_int += -dxij * pairs[1];
+					ATOMS[ii].fy_int += dyij * pairs[1];
+					ATOMS[jj].fy_int += -dyij * pairs[1];
 
 					delete[] pairs;	
 				}
@@ -98,10 +98,10 @@ float analysis::computeNonBondedInteractions(atom_style *ATOMS, System *BOX, WCA
 
 						pe += pairs[0];
 
-						ATOMS[ii].fx += dxij * pairs[1];
-						ATOMS[jj].fx += -dxij * pairs[1];
-						ATOMS[ii].fy += dyij * pairs[1];
-						ATOMS[jj].fy += -dyij * pairs[1];
+						ATOMS[ii].fx_int += dxij * pairs[1];
+						ATOMS[jj].fx_int += -dxij * pairs[1];
+						ATOMS[ii].fy_int += dyij * pairs[1];
+						ATOMS[jj].fy_int += -dyij * pairs[1];
 
 						delete[] pairs;		
 					}

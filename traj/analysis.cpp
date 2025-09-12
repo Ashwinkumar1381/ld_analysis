@@ -17,7 +17,8 @@ analysis::atomsXYZ::atomsXYZ()
 {
 	rxt1 = ryt1 = rxt2 = ryt2 = 0.0;
 	vx = vy = vz = vxth = vyth = 0.0;
-	fx = fy = 0.0;
+	fx = fy = fx_int = fy_int = 0.0;
+	si = 1;
 	jumpx = jumpy = 0;
 }
 
@@ -327,7 +328,7 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 			if(new_frame == 0) 
 				printf("\nFirst frame: Step %ld\n", step);
 
-			if(new_frame > 0)
+			if( new_frame > 0 and strcmp(format, "xyz") == 0 )
 			{
 				for(int i = 0; i < nAtoms; i++)
 				{
@@ -342,12 +343,12 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 
 					if(dy <= -0.5*BOX->Ly) ATOMS[new_frame][i].jumpy++;
 					else if(dy >= 0.5*BOX->Ly) ATOMS[new_frame][i].jumpy--;
-				}
+				}	
 			}
 
 			if(new_frame == frameEnd - frameStart)
 			{
-				printf("Last frame: Step %ld\n", step);
+				printf("Last frame : Step %ld\n", step);
 				break;
 			} 
 		}
@@ -429,10 +430,20 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			// if(ATOMS[pid].type == 1) ATOMS[pid].id = 'N';
 			// else if(ATOMS[pid].type == 2) ATOMS[pid].id = 'O';
 
-			sscanf(pipeString, "%*d %c %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+			// sscanf(pipeString, "%*d %c %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
-			if(ATOMS[pid].id == 'N') ATOMS[pid].type = 1;
-			else if(ATOMS[pid].id == 'O') ATOMS[pid].type = 2;
+			sscanf(pipeString, "%*d %c %f %f %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].fx, &ATOMS[pid].fy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+
+			if(ATOMS[pid].id == 'O') 
+			{
+				ATOMS[pid].si = +1;
+				ATOMS[pid].type = 1;
+			}
+			else if(ATOMS[pid].id == 'N')
+			{
+				ATOMS[pid].si = -1;
+				ATOMS[pid].type = 2;
+			} 
 		}
 	}
 
@@ -460,10 +471,10 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Lx);
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Ly);
 		fprintf(fileO, "0 0\n");
-		fprintf(fileO, "ITEM: ATOMS id element x y vx vy ix iy\n");
+		fprintf(fileO, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n");
 
 		for(int i = 0; i < nAtoms; i++)
-			fprintf(fileO, "%d %c %g %g %g %g %d %d\n", i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].jumpx, ATOMS[i].jumpy);
+			fprintf(fileO, "%d %c %g %g %g %g %g %g %d %d\n", i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].fx, ATOMS[i].fy, ATOMS[i].jumpx, ATOMS[i].jumpy);
 	}
 }
 
