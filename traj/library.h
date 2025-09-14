@@ -7,10 +7,11 @@
 #include<fstream>
 #include<cstring>
 #include<stdio.h>
-#include<string.h>
+#include<string>
 #include<stdlib.h>
 #include<filesystem>
 #include<math.h>
+#include<vector>
 
 #ifdef _OPENMP
 #include<omp.h>

@@ -1,7 +1,7 @@
 /*
 	Extract specific frames from multiple trajectories and combine into one trajectory
 
-	Last modified : 05.08.25
+	Last modified : 14.09.25
 */
 
 #include "analysis.h"
@@ -17,54 +17,56 @@ int main(int argc, char* argv[])
 	/* ---------- Trajectory Params ---------- */
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	long startStep1 = long(1e7);
-	long endStep1 = long(4.7e9 + 1e7);
-	long startStep2 = long(1);
-	long endStep2 = long(3e8);
+	
+	int nFiles = 3;
+	long startStep[nFiles] = {1e7, 1e0, 1e0};
+	long endStep[nFiles]   = {2.13e9, 2e9, 8.8e8};
+	string filenames[nFiles] = {"traj2_old", "traj2_res", "traj3_res"};
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/traj2_old.%s", TRAJ->format);
 	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/traj2.%s", TRAJ->format);
-
-	TRAJ -> openTrajectory();
 	TRAJ -> createOutputFile();
 
-	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+	atom_style *ATOMS;
+	System *BOX;
 
-	while( !feof(TRAJ->fileI) )
+	for(int i = 0; i < nFiles; i++)
 	{
-		TRAJ -> readThisFrame(ATOMS);
+		sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/%s.%s", (filenames[i]).c_str(), TRAJ->format);
+		TRAJ -> openTrajectory();
 
-		if(TRAJ->step >= startStep1 and TRAJ->step <= endStep1)
-			TRAJ -> writeThisFrame(ATOMS, BOX, 0);
+		int addStep = 0;
 
-		if(TRAJ->step == endStep1) 
+		if(i == 0)
 		{
-			printf("\n\nSource: %s\nDestination: %s\nTotal frames extracted: %d\n", TRAJ->fpathI, TRAJ->fpathO, TRAJ->frame_nr);
-			break;
+			ATOMS = new atom_style[TRAJ->nAtoms];
+			BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+
+			TRAJ->totalFrames = 0;
 		}
-	}
+		else
+			addStep = endStep[i - 1];
 
-	TRAJ -> closeTrajectory(true, false);
-
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/traj2_res.%s", TRAJ->format);
-
-	TRAJ -> openTrajectory();
-
-	while( !feof(TRAJ->fileI) )
-	{
-		TRAJ -> readThisFrame(ATOMS);
-
-		if(TRAJ->step >= startStep2 and TRAJ->step <= endStep2)
-			TRAJ -> writeThisFrame(ATOMS, BOX, endStep1);
-
-		if(TRAJ->step == endStep2)
+		while( !feof(TRAJ->fileI) )
 		{
-			printf("\n\nSource: %s\nDestination: %s\nTotal frames extracted: %d\n", TRAJ->fpathI, TRAJ->fpathO, TRAJ->frame_nr);
-			break;
-		}
-	}
+			TRAJ -> readThisFrame(ATOMS);
 
-	TRAJ -> closeTrajectory(true, true);
+			if(TRAJ->step >= startStep[i] and TRAJ->step <= endStep[i])
+				TRAJ -> writeThisFrame(ATOMS, BOX, addStep);
+
+			if(TRAJ->step == endStep[i]) 
+			{
+				endStep[i] += addStep;
+				TRAJ->totalFrames += TRAJ->frame_nr;
+
+				printf("\n\nSource: %s\nDestination: %s\nFrames extracted this step: %d\nTotal frames extracted: %d\n", TRAJ->fpathI, TRAJ->fpathO, TRAJ->frame_nr, TRAJ->totalFrames);
+				break;
+			}
+		}
+
+		if(i < nFiles - 1)
+			TRAJ -> closeTrajectory(true, false);
+		else
+			TRAJ -> closeTrajectory(true, true);
+	}
 }
