@@ -5,57 +5,43 @@
 
 	Author			: Ashwin Kumar
 	Date created 	: 15.03.25
-	Last modified	: 07.08.25
+	Last modified	: 30.09.25
 */
 
 #include "analysis.h"
 
 using namespace analysis;
 
-void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int nSample);
+void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, char group[], int delFrames[], int nSample);
 
 int main(int argc, char *argv[])
 {
 	// ----------- System Params -----------
-	float Lx = 150.0, Ly = 30.0;
+	float Lx = 50.0, Ly = 50.0;
 	int nAtomTypes = 2;
 
 	// ----------- Trajectory Params -----------
-	int frameStart = int(4e4), frameEnd = int(5e4);
-	float dt = 5e-5;
-	int frameW = int(1e5);
+	int frameStart = int(1e4), frameEnd = int(5e4) - 1;
+	float dt = 5e-4;
+	int frameW = int(7000);
 
-	int nSample = 36;
+	char group[5] = "2";
+	int nSample = 14;
+	int delFrames[nSample] = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 1e4, 2e4};
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data37/traj2.cfg");
-	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe90/Data37/msd.dat");
+	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/Fd100/tau_1e-3/tau_col_2/traj2.cfg");
+	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/Fd100/tau_1e-3/tau_col_2/msd_2.dat");
 	TRAJ -> openTrajectory();
 
-	int *delFrames = new int[nSample];
-
-	int ctr = 0, j = 0;
-	for(int i = 0; i < nSample; i++)
-	{
-		j++;
-		delFrames[i] = int(j * pow(10, ctr));
- 		
- 		if(j % 9 == 0)
-		{
-			j = 0;
-			ctr++;
-		}
-	}
-
 	TRAJ->totalFrames = frameEnd - frameStart + 1;
-
 	atom_style **ATOMS = new atom_style* [TRAJ->totalFrames];
 	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
 	for(int i = 0; i < TRAJ->totalFrames; i++) 
 		ATOMS[i] = new atom_style [TRAJ->nAtoms];
 
 	TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd); 
-	computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, delFrames, nSample);
+	computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, group, delFrames, nSample);
 
 	TRAJ -> closeTrajectory(true, true);
 
@@ -63,7 +49,7 @@ int main(int argc, char *argv[])
 	return(0);
 }
 
-void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, int *delFrames, int nSample)
+void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **ATOMS, char group[], int delFrames[], int nSample)
 {
 	printf("\nComputing MSD...\n");
 
@@ -77,8 +63,20 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 			MSD[i][j] = 0.0;
 	}
 
-	for(int j = 0; j < nSample; j++)
-		count[j] = 0;
+	for(int i = 0; i < nSample; i++)
+		count[i] = 0;
+
+	long **group_lists = TRAJ->sortAtomsByType(ATOMS[0], BOX);
+
+	int loopMax, group_id = 0;
+
+	if(strcmp(group, "all") == 0)
+		loopMax = TRAJ->nAtoms;
+	else
+	{
+		sscanf(group, "%d\n", &group_id);
+		loopMax = group_lists[0][group_id - 1];
+	}
 
 	for(int currFrame = 0; currFrame < TRAJ -> totalFrames; currFrame++)
 	{
@@ -90,10 +88,14 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 			
 			if(nextFrame < TRAJ->totalFrames)
 			{
-				for(int j = 0; j < TRAJ->nAtoms; j++)
+				for(int j = 0; j < loopMax; j++)
 				{
-					float dx = ATOMS[nextFrame][j].rxt1 - ATOMS[currFrame][j].rxt1 + BOX->Lx*(ATOMS[nextFrame][j].jumpx - ATOMS[currFrame][j].jumpx);
-					float dy = ATOMS[nextFrame][j].ryt1 - ATOMS[currFrame][j].ryt1 + BOX->Ly*(ATOMS[nextFrame][j].jumpy - ATOMS[currFrame][j].jumpy);
+					int k = j;
+					if(group_id != 0)
+						k = group_lists[group_id][j] - 1;
+
+					float dx = ATOMS[nextFrame][k].rxt1 - ATOMS[currFrame][k].rxt1 + BOX->Lx*(ATOMS[nextFrame][k].jumpx - ATOMS[currFrame][k].jumpx);
+					float dy = ATOMS[nextFrame][k].ryt1 - ATOMS[currFrame][k].ryt1 + BOX->Ly*(ATOMS[nextFrame][k].jumpy - ATOMS[currFrame][k].jumpy);
 					float dx2 = dx*dx;
 					float dy2 = dy*dy;
 					float dxdy = abs(dx)*abs(dy);
@@ -123,5 +125,7 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 void analysis::Trajectory::write2file(float **MSD, int *count, int *delFrames, int nSample)
 {
 	for(int i = 0; i < nSample; i++)
-		fprintf(fileO, "\n%d %d %g %g %g %g", int(delFrames[i]*frameWidth*timeStep), count[i], MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i]);
+		fprintf(fileO, "\n%g %d %g %g %g %g", delFrames[i]*frameWidth*timeStep, count[i], MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i]);
+
+	fprintf(fileO, "\n");
 }

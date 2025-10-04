@@ -268,6 +268,30 @@ void analysis::Trajectory::openTrajectory(bool count)
 				fgets(pipeString, 500, fileI);
 
 			sscanf(pipeString, "%d", &nAtoms);
+
+			for(int i = 0; i < 5; i++)
+				fgets(pipeString, 500, fileI);
+
+			if(strcmp(pipeString, "ITEM: ATOMS id element x y ix iy\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "d", "d");
+				line_fmt_mode = 1;
+			}
+			else if(strcmp(pipeString, "ITEM: ATOMS id element x y vx vy ix iy\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "g", "g", "d", "d");
+				line_fmt_mode = 2;
+			}
+			else if(strcmp(pipeString, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "g", "g", "g", "g", "d", "d");
+				line_fmt_mode = 3;
+			}
+			else
+			{
+				printf("Invalid line format in trajectory %s. Exiting...\n", fpathI);
+				exit(-1);
+			}
 		}
 
 		rewind(fileI);
@@ -328,7 +352,7 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 			if(new_frame == 0) 
 				printf("\nFirst frame: Step %ld\n", step);
 
-			if( new_frame > 0 and strcmp(format, "xyz") == 0 )
+			if(new_frame > 0 and strcmp(format, "xyz") == 0)
 			{
 				for(int i = 0; i < nAtoms; i++)
 				{
@@ -346,7 +370,7 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 				}	
 			}
 
-			if(new_frame == frameEnd - frameStart)
+			if(frame_nr == frameEnd)
 			{
 				printf("Last frame : Step %ld\n", step);
 				break;
@@ -354,7 +378,7 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 		}
 	}
 
-	printf("\nCoordinates loaded successfully!\n");
+	printf("\nCoordinates loaded successfully for %d frames!\n", frame_nr -frameStart + 1);
 	rewind(fileI);
 
 	delete[] tempATOMS;
@@ -364,6 +388,7 @@ void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To)
 {
 	for(int i = 0; i < nAtoms; i++)
 	{
+		To[i].type = From[i].type;
 		To[i].id = From[i].id;
 		To[i].rxt1 = From[i].rxt1;
 		To[i].ryt1 = From[i].ryt1;
@@ -408,7 +433,7 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 
 	else if(strcmp(format, "cfg") == 0)
 	{
-		int pid;
+		int pid, temp_id;
 
 		for(int i = 0; i < 2; i++)
 			fgets(pipeString, 500, fileI);
@@ -422,17 +447,17 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 		{
 			fgets(pipeString, 500, fileI);
 
-			sscanf(pipeString, "%d %*d %*f %*f %*f %*f %*f %*f", &pid);
+			sscanf(pipeString, "%d", &pid);
 			pid -= 1;
 
-			// sscanf(pipeString, "%*d %d %f %f %f %f %d %d", &ATOMS[pid].type, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+			if(line_fmt_mode == 1)
+				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
-			// if(ATOMS[pid].type == 1) ATOMS[pid].id = 'N';
-			// else if(ATOMS[pid].type == 2) ATOMS[pid].id = 'O';
+			else if(line_fmt_mode == 2)
+				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
-			// sscanf(pipeString, "%*d %c %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
-
-			sscanf(pipeString, "%*d %c %f %f %f %f %f %f %d %d", &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].fx, &ATOMS[pid].fy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+			else if(line_fmt_mode == 3)
+				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].fx, &ATOMS[pid].fy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
 			if(ATOMS[pid].id == 'O') 
 			{
@@ -443,7 +468,7 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			{
 				ATOMS[pid].si = -1;
 				ATOMS[pid].type = 2;
-			} 
+			}
 		}
 	}
 
@@ -471,10 +496,30 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Lx);
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Ly);
 		fprintf(fileO, "0 0\n");
-		fprintf(fileO, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n");
 
-		for(int i = 0; i < nAtoms; i++)
-			fprintf(fileO, "%d %c %g %g %g %g %g %g %d %d\n", i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].fx, ATOMS[i].fy, ATOMS[i].jumpx, ATOMS[i].jumpy);
+		if(line_fmt_mode == 1)
+		{
+			fprintf(fileO, "ITEM: ATOMS id element x y ix iy\n");
+
+			for(int i = 0; i < nAtoms; i++)
+				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+		}
+
+		else if(line_fmt_mode == 2)
+		{
+			fprintf(fileO, "ITEM: ATOMS id element x y vx vy ix iy\n");
+
+			for(int i = 0; i < nAtoms; i++)
+				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+		}
+
+		else if(line_fmt_mode == 3)
+		{
+			fprintf(fileO, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n");
+
+			for(int i = 0; i < nAtoms; i++)
+				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].fx, ATOMS[i].fy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+		}
 	}
 }
 
@@ -490,6 +535,56 @@ void analysis::Trajectory::computeCom(atom_style *ATOMS)
 
 	xCom /= nAtoms;
 	yCom /= nAtoms;
+}
+
+long** analysis::Trajectory::sortAtomsByType(atom_style *ATOMS, System *BOX)
+{
+	if(nAtoms == 0)
+	{
+		printf("Error: Zero atoms present in trajectory! Exiting...\n");
+		exit(-1);
+	}
+	if(BOX->nAtomTypes == 0)
+	{
+		printf("Error: Zero atom types present in trajectory! Exiting...\n");
+		exit(-1);
+	}
+
+	long **group_lists = new long*[1 + BOX->nAtomTypes];
+	int ctr[BOX->nAtomTypes];
+
+	group_lists[0] = new long[BOX->nAtomTypes];
+	for(int i = 0; i < BOX->nAtomTypes; i++)
+	{
+		group_lists[0][i] = 0;
+		ctr[i] = 0;
+	}
+
+	for(int i = 0; i < nAtoms; i++)
+	{
+		if(ATOMS[i].type == 0 or ATOMS[i].type > BOX->nAtomTypes)
+		{
+			printf("Error: Invalid group type for Atom %d! Exiting ...\n", i + 1);
+			exit(-1);
+		}
+
+		group_lists[0][ATOMS[i].type - 1]++;
+	}
+
+	for(int i = 0; i < BOX->nAtomTypes; i++)
+	{
+		group_lists[i + 1] = new long[group_lists[0][i]];
+		for(int j = 0; j < group_lists[0][i]; j++)
+			group_lists[i + 1][j] = 0;
+	}
+
+	for(int i = 0; i < nAtoms; i++)
+	{
+		group_lists[ATOMS[i].type][ctr[ATOMS[i].type - 1]] = i + 1;
+		ctr[ATOMS[i].type - 1]++;
+	}
+
+	return(group_lists);
 }
 
 int analysis::bounds(float a)

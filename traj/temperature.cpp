@@ -21,11 +21,11 @@ int main(int argc, char *argv[])
 	/* -------- Trajectory Params -------- */
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	int frameStart = int(4e4), frameEnd = int(5e4);
+	int frameStart = int(0e4), frameEnd = int(5e4);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd100/tau_1e-3/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd100/tau_1e-3/");
 
 	TRAJ -> openTrajectory();
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
-		sprintf(TRAJ->fpathO, "%stemp.dat", TRAJ->fpathO);
+		sprintf(TRAJ->fpathO, "%stemp_all.dat", TRAJ->fpathO);
 		TRAJ -> createOutputFile("step temp temp_x temp_y");
 
 		int ctr = 0;

@@ -120,6 +120,8 @@ namespace analysis {
 	float timeStep, time;
 	float xCom, yCom, zCom; 
 	char *format;
+	char line_fmt[50];
+	int line_fmt_mode;
 
 	char *fpathI, *fpathO, *pipeString, *pipeChar;
 	FILE *fileI, *fileO;
@@ -138,6 +140,7 @@ namespace analysis {
 	void writeThisFrame(atom_style *ATOMS, System *BOX, long add_step = 0);
 	void copyThisFrame(atom_style *From, atom_style *To);
 	void computeCom(atom_style *ATOMS);
+	long **sortAtomsByType(atom_style *ATOMS, System *BOX);
 
 	void write2file();
 	void write2file(Bin1D *bin1, int ctr = 0);

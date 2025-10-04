@@ -19,12 +19,12 @@ int main(int argc, char* argv[])
 	// ---------- Trajectory Params ----------
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	int frameStart = int(0e4), frameEnd = int(5e4);
+	int frameStart = int(3e4), frameEnd = int(5e4);
 
 	// ---------- System Params ----------
 	float Lx = 150.0, Ly = 30.0;
 	int nAtomTypes = 2;
-	float Fd = 100.0;
+	float Fd = 80.0;
 	float tau = 1e0;
 
 	char *option = new char[20];
@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
 	// sprintf(option, "time_avg_traj");
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_1e0/power_x.dat");
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd80/tau_1e0/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd80/tau_1e0/power_x.dat");
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];

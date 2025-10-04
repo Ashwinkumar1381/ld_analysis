@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 	int frameW = int(1e5);
 	
 	int nFiles = 3;
-	long startStep[nFiles] = {1e7, 1e0, 1e0};
-	long endStep[nFiles]   = {2.13e9, 2e9, 8.8e8};
+	long startStep[nFiles] = {long(1e7), long(1e0), long(1e0)};
+	long endStep[nFiles]   = {long(2.13e9), long(2e9), long(8.8e8)};
 	string filenames[nFiles] = {"traj2_old", "traj2_res", "traj3_res"};
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 		sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-2/%s.%s", (filenames[i]).c_str(), TRAJ->format);
 		TRAJ -> openTrajectory();
 
-		int addStep = 0;
+		long addStep = 0;
 
 		if(i == 0)
 		{
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 				endStep[i] += addStep;
 				TRAJ->totalFrames += TRAJ->frame_nr;
 
-				printf("\n\nSource: %s\nDestination: %s\nFrames extracted this step: %d\nTotal frames extracted: %d\n", TRAJ->fpathI, TRAJ->fpathO, TRAJ->frame_nr, TRAJ->totalFrames);
+				printf("\nSource: %s\nDestination: %s\nFrames extracted this step: %d\nTotal frames extracted: %d\n", TRAJ->fpathI, TRAJ->fpathO, TRAJ->frame_nr, TRAJ->totalFrames);
 				break;
 			}
 		}
