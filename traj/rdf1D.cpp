@@ -20,23 +20,23 @@ int main(int argc, char* argv[])
 {
 	// ---------- Trajectory params ----------
 	float dt = 5e-4;
-	int frameW = int(1e5);
-	int frameStart = int(4e4), frameEnd = int(5e4);
+	int frameW = int(2000);
+	int frameStart = int(4e4), frameEnd = int(5e4)-1;
 
 	// ---------- System params ----------
 	int nAtomTypes = 2;
-	float xA = 0.5, xB = 0.5;
-	float Lx = 150.0, Ly = 30.0, rho = 0.45;
+	float xA = 8.889e-4, xB = 0.999111;
+	float Lx = 50.0, Ly = 50.0, rho = 0.45;
 
 	// ---------- RDF params ----------
-	float Rcut[2] = {10.0, 10.0};
-	char option[10] = "symm";
-	int Nbins[2] = {200, 200};
+	float Rcut[2] = {5.0, 5.0};
+	char option[10] = "asymm";
+	int Nbins[2] = {50, 50};
 
 	// ---------- Opening trajectory ----------
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe70/Data26/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/June_July2025/Pe70/Data26/laneRDF_1D_%s.dat", option);
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/Fd450/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/Fd450/laneRDF_1D_%s.dat", option);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
@@ -64,6 +64,9 @@ int main(int argc, char* argv[])
 			ctr++;
 			printf("Processing step %ld, frame %d\n", TRAJ->step, ctr);
 			computeRDF_1D(RDF_x_y, ATOMS, BOX, nRDFtypes, Rcut, binW, option);
+
+			if(TRAJ->frame_nr == frameEnd)
+				break;
 		}
 	}
 
@@ -94,7 +97,7 @@ int main(int argc, char* argv[])
 		}	
 	}
 
-	printf("RDF computed and averaged over %d frames.\n", ctr);
+	printf("\nRDF computed and averaged over %d frames.\n", ctr);
 
 	TRAJ -> write2file(RDF_x_y, nRDFtypes, Nbins, binW, option);
 	TRAJ -> closeTrajectory();
@@ -155,10 +158,10 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 						{
 							if(ATOMS[i].id == ATOMS[j].id)
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 									RDFx[1][bin_x] += 2.0;
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 									RDFx[4][bin_x] += 2.0;
 							}
 
@@ -180,10 +183,10 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 						{
 							if(ATOMS[i].id == ATOMS[j].id)
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 									RDFy[1][bin_y] += 2.0;
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 									RDFy[4][bin_y] += 2.0;
 							}
 
@@ -211,13 +214,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 						{
 							if(ATOMS[i].id == ATOMS[j].id)
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 								{
 									RDFx[1][bin_xi] += 1.0;
 									RDFx[1][bin_xj] += 1.0;
 								}
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 								{
 									RDFx[4][bin_xi] += 1.0;
 									RDFx[4][bin_xj] += 1.0;	
@@ -226,13 +229,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 							else
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 								{
 									RDFx[2][bin_xi] += 1.0;
 									RDFx[3][bin_xj] += 1.0;	
 								}
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 								{
 									RDFx[3][bin_xi] += 1.0;
 									RDFx[2][bin_xj] += 1.0;
@@ -253,13 +256,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 						{
 							if(ATOMS[i].id == ATOMS[j].id)
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 								{
 									RDFy[1][bin_yi] += 1.0;
 									RDFy[1][bin_yj] += 1.0;
 								}
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 								{
 									RDFy[4][bin_yi] += 1.0;
 									RDFy[4][bin_yj] += 1.0;	
@@ -268,13 +271,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 							else
 							{
-								if(ATOMS[i].id == 'N')
+								if(ATOMS[i].id == 'O')
 								{
 									RDFy[2][bin_yi] += 1.0;
 									RDFy[3][bin_yj] += 1.0;	
 								}
 
-								else if(ATOMS[i].id == 'O')
+								else if(ATOMS[i].id == 'N')
 								{
 									RDFy[3][bin_yi] += 1.0;
 									RDFy[2][bin_yj] += 1.0;

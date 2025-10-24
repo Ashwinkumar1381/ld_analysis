@@ -21,31 +21,41 @@ int main(int argc, char *argv[])
 	int nAtomTypes = 2;
 
 	// ----------- Trajectory Params -----------
-	int frameStart = int(1e4), frameEnd = int(5e4) - 1;
+	int frameStart = int(0e4), frameEnd = int(2e4) - 1;
 	float dt = 5e-4;
-	int frameW = int(7000);
+	int frameW = int(9000);
 
-	char group[5] = "2";
-	int nSample = 14;
-	int delFrames[nSample] = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 1e4, 2e4};
+	char group[5] = "1";
+	int nSample = 12;
+	int delFrames[nSample] = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000};
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/Fd100/tau_1e-3/tau_col_2/traj2.cfg");
-	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/Fd100/tau_1e-3/tau_col_2/msd_2.dat");
+	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/test2/traj2.cfg");
+	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/test2/msd.dat");
 	TRAJ -> openTrajectory();
 
-	TRAJ->totalFrames = frameEnd - frameStart + 1;
-	atom_style **ATOMS = new atom_style* [TRAJ->totalFrames];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
-	for(int i = 0; i < TRAJ->totalFrames; i++) 
-		ATOMS[i] = new atom_style [TRAJ->nAtoms];
+	if(frameEnd < frameStart)
+	{
+		printf("Error: Ending frame number cannot be smaller than the starting frame. Exiting...\n");
+		exit(-1);
+	}
+	else
+	{
+		TRAJ->totalFrames = frameEnd - frameStart + 1;
 
-	TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd); 
-	computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, group, delFrames, nSample);
+		atom_style **ATOMS = new atom_style* [TRAJ->totalFrames];
+		System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+		for(int i = 0; i < TRAJ->totalFrames; i++) 
+			ATOMS[i] = new atom_style [TRAJ->nAtoms];
+
+		TRAJ -> loadTrajectory(ATOMS, BOX, frameStart, frameEnd, true); 
+		computeMeanSquaredDisplacement(TRAJ, BOX, ATOMS, group, delFrames, nSample);
+
+		delete[] ATOMS;
+	}
 
 	TRAJ -> closeTrajectory(true, true);
 
-	delete[] ATOMS; 
 	return(0);
 }
 
@@ -78,7 +88,9 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 		loopMax = group_lists[0][group_id - 1];
 	}
 
-	for(int currFrame = 0; currFrame < TRAJ -> totalFrames; currFrame++)
+	// printf("%d %d %d\n", group_lists[0][0], group_lists[0][1], loopMax);
+
+	for(int currFrame = 0; currFrame < TRAJ->totalFrames; currFrame++)
 	{
 		int ctr = 0;
 
@@ -115,7 +127,7 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 	for(int i = 0; i < nSample; i++)
 	{
 		for(int j = 0; j < 4; j++)
-			MSD[j][i] /= count[i];
+			MSD[j][i] /= float(count[i]);
 	}
 
 	TRAJ -> createOutputFile("time count MSD_all MSD_xx MSD_yy MSD_xy");

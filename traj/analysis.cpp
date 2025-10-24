@@ -26,7 +26,7 @@ analysis::atomsXYZ::~atomsXYZ(){}
 
 /* ----------------- System members -----------------*/
 
-analysis::System::System(float Lx, float Ly, int nAtoms, int nAtomTypes, float rcellx, float rcelly)
+analysis::System::System(float Lx, float Ly, int nAtoms, int nAtomTypes, bool buildMaps, float rcellx, float rcelly)
 {
 	this -> Lx = Lx;
 	this -> Ly = Ly;
@@ -49,7 +49,8 @@ analysis::System::System(float Lx, float Ly, int nAtoms, int nAtomTypes, float r
 		HEAD[i] = 0;
 	}
 
-	//buildCellMaps();
+	if(buildMaps == true)
+		buildCellMaps();
 }
 
 analysis::System::~System(){}
@@ -274,17 +275,17 @@ void analysis::Trajectory::openTrajectory(bool count)
 
 			if(strcmp(pipeString, "ITEM: ATOMS id element x y ix iy\n") == 0)
 			{
-				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "d", "d");
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "d", "d");
 				line_fmt_mode = 1;
 			}
 			else if(strcmp(pipeString, "ITEM: ATOMS id element x y vx vy ix iy\n") == 0)
 			{
-				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "g", "g", "d", "d");
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "f", "f", "d", "d");
 				line_fmt_mode = 2;
 			}
 			else if(strcmp(pipeString, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n") == 0)
 			{
-				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "g", "g", "g", "g", "g", "g", "d", "d");
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "f", "f", "f", "f", "d", "d");
 				line_fmt_mode = 3;
 			}
 			else
@@ -334,7 +335,7 @@ void analysis::Trajectory::closeTrajectory(bool closeI, bool closeO)
 	}
 }
 
-void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd)
+void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd, bool unwrap_pbc)
 {
 	atom_style *tempATOMS = new atom_style[nAtoms];
 
@@ -347,12 +348,12 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 		{
 			int new_frame = frame_nr - frameStart;
 
-			copyThisFrame(tempATOMS, ATOMS[new_frame]);
+			copyThisFrame(tempATOMS, ATOMS[new_frame], unwrap_pbc);
 
 			if(new_frame == 0) 
 				printf("\nFirst frame: Step %ld\n", step);
 
-			if(new_frame > 0 and strcmp(format, "xyz") == 0)
+			if(new_frame > 0 and unwrap_pbc == true)
 			{
 				for(int i = 0; i < nAtoms; i++)
 				{
@@ -367,6 +368,9 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 
 					if(dy <= -0.5*BOX->Ly) ATOMS[new_frame][i].jumpy++;
 					else if(dy >= 0.5*BOX->Ly) ATOMS[new_frame][i].jumpy--;
+
+					// if(ATOMS[new_frame][i].id == 'O')
+					// 	printf("Frame %d, Jumpy = %d\n", new_frame, ATOMS[new_frame][i].jumpy);
 				}	
 			}
 
@@ -378,13 +382,13 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 		}
 	}
 
-	printf("\nCoordinates loaded successfully for %d frames!\n", frame_nr -frameStart + 1);
+	printf("\nCoordinates loaded successfully for %d frames!\n", frame_nr - frameStart + 1);
 	rewind(fileI);
 
 	delete[] tempATOMS;
 }
 
-void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To)
+void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To, bool unwrap_pbc)
 {
 	for(int i = 0; i < nAtoms; i++)
 	{
@@ -392,8 +396,12 @@ void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To)
 		To[i].id = From[i].id;
 		To[i].rxt1 = From[i].rxt1;
 		To[i].ryt1 = From[i].ryt1;
-		To[i].jumpx = From[i].jumpx;
-		To[i].jumpy = From[i].jumpy;
+
+		if(unwrap_pbc == false)
+		{
+			To[i].jumpx = From[i].jumpx;
+			To[i].jumpy = From[i].jumpy;
+		}
 	}
 }
 

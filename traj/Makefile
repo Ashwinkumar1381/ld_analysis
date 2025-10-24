@@ -48,5 +48,8 @@ temp: temperature.cpp analysis.cpp
 power: power.cpp computeInteractions.cpp analysis.cpp ../../LD/LD-cpp/src/interactions.cpp
 	$(CC) $(CFLAGS) power.cpp computeInteractions.cpp analysis.cpp ../../LD/LD-cpp/src/interactions.cpp -o ./bin/power.o
 
+collision: collisions.cpp analysis.cpp
+	$(CC) $(CFLAGS) collisions.cpp analysis.cpp -o ./bin/coll.o
+
 clean:
 	rm -f ./bin/*.o

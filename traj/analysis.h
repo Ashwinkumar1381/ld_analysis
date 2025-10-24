@@ -43,7 +43,7 @@ namespace analysis {
 
 	int MAPS[MAXCELL], HEAD[MAXCELL], LIST[MAXCELL];
 
-	System(float Lx, float Ly, int nAtoms, int nAtomTypes, float rcellx = rcutoff, float rcelly = rcutoff);
+	System(float Lx, float Ly, int nAtoms, int nAtomTypes, bool buildMaps = false, float rcellx = rcutoff, float rcelly = rcutoff);
 	~System();
 
 	int cellindex(int ix, int iy);
@@ -133,12 +133,12 @@ namespace analysis {
 	void openTrajectory(bool count = false);
 	void createOutputFile(char line[] = "");
 	void closeTrajectory(bool closeI = true, bool closeO = true);
-	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd);
+	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd, bool unwrap_pbc = false);
 	void countFrames();
 	void readThisFrame(atom_style *ATOMS);
 	void readNextFrame(atom_style *ATOMS);
 	void writeThisFrame(atom_style *ATOMS, System *BOX, long add_step = 0);
-	void copyThisFrame(atom_style *From, atom_style *To);
+	void copyThisFrame(atom_style *From, atom_style *To, bool unwrap_pbc = false);
 	void computeCom(atom_style *ATOMS);
 	long **sortAtomsByType(atom_style *ATOMS, System *BOX);
 

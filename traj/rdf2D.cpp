@@ -136,13 +136,13 @@ void computeRDF_2D(float ***RDF, atom_style *ATOMS, System *BOX, int nRDFtypes, 
 				{
 					if(ATOMS[i].id == ATOMS[j].id)
 					{
-						if(ATOMS[i].id == 'N')
+						if(ATOMS[i].id == 'O')
 						{
 							RDF[1][bin_xi][bin_yi] += 1.0;
 							RDF[1][bin_xj][bin_yj] += 1.0;
 						}
 
-						else if(ATOMS[i].id == 'O')
+						else if(ATOMS[i].id == 'N')
 						{
 							RDF[4][bin_xi][bin_yi] += 1.0;
 							RDF[4][bin_xj][bin_yj] += 1.0;
