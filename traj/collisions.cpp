@@ -17,17 +17,17 @@ using namespace analysis;
 int main(int argc, char *argv[])
 {
 	// -------- System params --------
-	float Lx = 50.0, Ly = 50.0;
+	float Lx = 150.0, Ly = 30.0;
 	int nAtomTypes = 2;
 
 	// -------- Trajectory params --------
-	int frameStart = int(1e4), frameEnd = int(5e4)-1;
+	int frameStart = int(0e4), frameEnd = int(5e4)-1;
 	float dt = 5e-4;
-	int frameW = int(90);
+	int frameW = int(50);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_5e-2/Fd500/traj2.cfg");
-	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_5e-2/Fd500/collisions.dat");
+	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_5e-2_N_2025/Fd500/traj2.cfg");
+	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_5e-2_N_2025/Fd500/collisions.dat");
 
 	if(frameEnd < frameStart)
 	{

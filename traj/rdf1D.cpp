@@ -20,23 +20,23 @@ int main(int argc, char* argv[])
 {
 	// ---------- Trajectory params ----------
 	float dt = 5e-4;
-	int frameW = int(2000);
-	int frameStart = int(4e4), frameEnd = int(5e4)-1;
+	int frameW = int(50);
+	int frameStart = int(4e4), frameEnd = int(5e4);
 
 	// ---------- System params ----------
 	int nAtomTypes = 2;
-	float xA = 8.889e-4, xB = 0.999111;
-	float Lx = 50.0, Ly = 50.0, rho = 0.45;
+	float xA = 2.469e-4, xB = 0.999753;
+	float Lx = 300.0, Ly = 30.0, rho = 0.45;
 
 	// ---------- RDF params ----------
-	float Rcut[2] = {5.0, 5.0};
+	float Rcut[2] = {150.0, 10.0};
 	char option[10] = "asymm";
-	int Nbins[2] = {50, 50};
+	int Nbins[2] = {750, 50};
 
 	// ---------- Opening trajectory ----------
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/Fd450/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/Fd450/laneRDF_1D_%s.dat", option);
+	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-1/Fd500_N4050/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-1/Fd500_N4050/laneRDF_1D_%s.dat", option);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
