@@ -5,7 +5,7 @@
 
 	Author			: Ashwin Kumar
 	Date created 	: 15.03.25
-	Last modified	: 30.09.25
+	Last modified	: 31.12.25
 */
 
 #include "analysis.h"
@@ -17,21 +17,39 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 int main(int argc, char *argv[])
 {
 	// ----------- System Params -----------
-	float Lx = 50.0, Ly = 50.0;
+	float Lx = 150.0, Ly = 30.0;
 	int nAtomTypes = 2;
 
 	// ----------- Trajectory Params -----------
-	int frameStart = int(0e4), frameEnd = int(2e4) - 1;
+	int frameStart = int(0e4), frameEnd = int(5e4);
 	float dt = 5e-4;
-	int frameW = int(9000);
+	int frameW = int(1e3);
 
 	char group[5] = "1";
-	int nSample = 12;
-	int delFrames[nSample] = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000};
+	int nSample = 14;
+	int delFrames[nSample] = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ -> fpathI, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/test2/traj2.cfg");
-	sprintf(TRAJ -> fpathO, "//media/ashwin/Expansion/ashwin_md/psps/tau_1e-3/test2/msd.dat");
+
+	if(argc == 1)
+	{
+		sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/msd_traj.cfg");
+		sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/msd_A.dat");	
+	}
+	else
+	{
+		int temp;
+		
+		sscanf(argv[3], "%d", &temp);
+		frameStart = temp;
+		
+		sscanf(argv[4], "%d", &temp);
+		frameEnd = temp;
+
+		sprintf(TRAJ -> fpathI, argv[1]);
+		sprintf(TRAJ -> fpathO, argv[2]);
+	}
+
 	TRAJ -> openTrajectory();
 
 	if(frameEnd < frameStart)
@@ -137,7 +155,7 @@ void computeMeanSquaredDisplacement(Trajectory *TRAJ, System *BOX, atom_style **
 void analysis::Trajectory::write2file(float **MSD, int *count, int *delFrames, int nSample)
 {
 	for(int i = 0; i < nSample; i++)
-		fprintf(fileO, "\n%g %d %g %g %g %g", delFrames[i]*frameWidth*timeStep, count[i], MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i]);
+		fprintf(fileO, "\n%g %d %f %f %f %f", delFrames[i]*frameWidth*timeStep, count[i], MSD[0][i], MSD[1][i], MSD[2][i], MSD[3][i]);
 
 	fprintf(fileO, "\n");
 }
