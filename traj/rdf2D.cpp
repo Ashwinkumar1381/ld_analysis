@@ -1,4 +1,12 @@
-// computeRDF_2D.cpp
+/*
+	computeRDF_2D.cpp
+
+	Calculates 2D full and partial pair distribution functions - g(x, y), on the 2D plane 
+
+	Author		  : Ashwin Kumar
+	Date created  : 25.04.25
+	Last modified : 20.02.26
+*/
 
 #include "analysis.h"
 
@@ -30,7 +38,7 @@ int main(int argc, char *argv[])
 	
 	TRAJ -> openTrajectory();
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
 
 	// ---------- RDF initialization ----------
 	int nRDFtypes = 1;
@@ -134,15 +142,15 @@ void computeRDF_2D(float ***RDF, atom_style *ATOMS, System *BOX, int nRDFtypes, 
 
 				if(nRDFtypes > 1)
 				{
-					if(ATOMS[i].id == ATOMS[j].id)
+					if(ATOMS[i].element == ATOMS[j].element)
 					{
-						if(ATOMS[i].id == 'O')
+						if(ATOMS[i].element == 'O')
 						{
 							RDF[1][bin_xi][bin_yi] += 1.0;
 							RDF[1][bin_xj][bin_yj] += 1.0;
 						}
 
-						else if(ATOMS[i].id == 'N')
+						else if(ATOMS[i].element == 'N')
 						{
 							RDF[4][bin_xi][bin_yi] += 1.0;
 							RDF[4][bin_xj][bin_yj] += 1.0;

@@ -12,6 +12,7 @@
 #include<filesystem>
 #include<math.h>
 #include<vector>
+#include<typeinfo>
 
 #ifdef _OPENMP
 #include<omp.h>

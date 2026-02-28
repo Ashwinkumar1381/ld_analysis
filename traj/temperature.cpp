@@ -123,7 +123,7 @@ void getVelocities(Trajectory *TRAJ, atom_style *ATOMS, System *BOX)
 		fprintf(TRAJ->fileO, "id type rx ry vx vy\n");
 
 	for(int i = 0; i < TRAJ->nAtoms; i++)
-		fprintf(TRAJ->fileO, "%d %d %g %g %g %g\n", i + 1, ATOMS[i].type, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy);
+		fprintf(TRAJ->fileO, "%d %d %g %g %g %g\n", ATOMS[i].atom_id, ATOMS[i].type, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy);
 
 	fclose(TRAJ->fileO);
 }
@@ -182,9 +182,9 @@ float computeThermalTemperature(atom_style *ATOMS, System *BOX)
 
 	for(int i = 0; i < BOX->nAtoms; i++)
 	{
-		int type = ATOMS[i].type - 1;
-		vCom[type][0] += ATOMS[i].vx;
-		vCom[type][1] += ATOMS[i].vy;
+		int ptype = ATOMS[i].type - 1;
+		vCom[ptype][0] += ATOMS[i].vx;
+		vCom[ptype][1] += ATOMS[i].vy;
 	}
 
 	for(int i = 0; i < BOX->nAtomTypes; i++)

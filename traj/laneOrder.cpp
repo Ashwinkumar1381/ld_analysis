@@ -3,7 +3,8 @@
 	*) Wächtler, C.W. et al. (2016) Physical Review E, 94(5) - computeLaneOrder1()
 	*) Dzubiella, J. et al. (2002) Physical Review E, 65(2) - computeLaneOrder2(), computeLaneOrder2B()
 
-	Last Modified : 17.06.25 
+	Author 		  : Ashwin Kumar
+	Last Modified : 20.02.26 
 */
 
 #define NUM_THREADS 1
@@ -206,10 +207,10 @@ float computeLaneOrder1(atom_style *ATOMS, System *BOX, float slabW_y)
 	{
 		int bin_id = int(ATOMS[i].ryt1 / slabW_y);
 
-		if(ATOMS[i].id == 'N')
+		if(ATOMS[i].element == 'N')
 			phi[bin_id] += -1.0;
 
-		else if(ATOMS[i].id == 'O')
+		else if(ATOMS[i].element == 'O')
 			phi[bin_id] += 1.0;
 
 		bin_ctr[bin_id] += 1;
@@ -238,7 +239,7 @@ float computeLaneOrder2(atom_style *ATOMS, System *BOX, float acut)
 
 		for(int j = 0; j < BOX->nAtoms; j++)
 		{
-			if(ATOMS[i].id != ATOMS[j].id)
+			if(ATOMS[i].element != ATOMS[j].element)
 			{
 				float dxij = ATOMS[i].rxt1 - ATOMS[j].rxt1;
 				float dyij = ATOMS[i].ryt1 - ATOMS[j].ryt1;
@@ -246,7 +247,7 @@ float computeLaneOrder2(atom_style *ATOMS, System *BOX, float acut)
 
 				if(dxij*dxij + dyij*dyij <= acut*acut)
 				{
-					// printf("Atoms %d(%c) and %d(%c) are separated by %f\n", i, ATOMS[i].id, j, ATOMS[j].id, dyij);
+					// printf("Atoms %d(%c) and %d(%c) are separated by %f\n", i, ATOMS[i].element, j, ATOMS[j].element, dyij);
 					add = 0;
 					break;
 				}
@@ -278,12 +279,12 @@ float computeLaneOrder2B(atom_style *ATOMS, System *BOX, float acut)
 
 	for(int i = 0; i < BOX->nAtoms; i++)
 	{
-		if(ATOMS[i].id == 'N')
+		if(ATOMS[i].element == 'N')
 		{
 			atomList[0][ctr[0]] = i;
 			ctr[0]++;
 		}
-		else if(ATOMS[i].id == 'O')
+		else if(ATOMS[i].element == 'O')
 		{
 			atomList[1][ctr[1]] = i;
 			ctr[1]++;

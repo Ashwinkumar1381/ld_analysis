@@ -4,14 +4,14 @@
 	Some utility classes to perform analysis on Trajectories
 
 	Date created  : 28.11.24
-	Last modified : 31.07.25
+	Last modified : 20.02.26
 */
 
 #include "analysis.h"
 
 using namespace analysis;
 
-/* ----------------- atomsXYZ members -----------------*/
+/* ----------------- atomsXYZ members ----------------- */
 
 analysis::atomsXYZ::atomsXYZ()
 {
@@ -24,23 +24,37 @@ analysis::atomsXYZ::atomsXYZ()
 
 analysis::atomsXYZ::~atomsXYZ(){}
 
-/* ----------------- System members -----------------*/
+/* ----------------- molecularXYZ members ----------------- */
 
-analysis::System::System(float Lx, float Ly, int nAtoms, int nAtomTypes, bool buildMaps, float rcellx, float rcelly)
+analysis::molecularXYZ::molecularXYZ()
+{
+	mol_id = 1;
+	rzt1 = 0.0;
+	jumpz = 0;
+}
+
+analysis::molecularXYZ::~molecularXYZ(){}
+
+/* ----------------- System members ----------------- */
+
+analysis::System::System(float Lx, float Ly, float Lz, int nAtoms, int nAtomTypes, bool buildMaps, float rcellx, float rcelly, float rcellz)
 {
 	this -> Lx = Lx;
 	this -> Ly = Ly;
+	this -> Lz = Lz;
 	this -> nAtoms = nAtoms;
 	this -> nAtomTypes = nAtomTypes;
 	this -> rcellx = rcellx;
 	this -> rcelly = rcelly;
+	this -> rcellz = rcellz;
 
 	Ncellx = int(this->Lx/this->rcellx);
 	Ncelly = int(this->Ly/this->rcelly);
-	ncells = int(Ncellx*Ncelly);
 
 	this->rcellx = this->Lx/Ncellx;
-	this->rcelly = this->Ly/Ncelly; 
+	this->rcelly = this->Ly/Ncelly;
+	
+	ncells = int(Ncellx*Ncelly);
 
 	for(int i = 0; i < MAXCELL; i++)
 	{
@@ -105,7 +119,7 @@ void analysis::System::buildCellList(atom_style *ATOMS)
 	}	
 }
 
-void analysis::System::checkMinImage(float *dx, float *dy)
+void analysis::System::checkMinImage(float *dx, float *dy, float *dz)
 {
 	if(dx != NULL)
 	{
@@ -116,6 +130,11 @@ void analysis::System::checkMinImage(float *dx, float *dy)
 	{
 		if(*dy >= 0.5*Ly) *dy -= Ly;
 		else if(*dy <= -0.5*Ly) *dy += Ly; 
+	}
+	if(dz != NULL)
+	{
+		if(*dz >= 0.5*Lz) *dz -= Lz;
+		else if(*dz <= -0.5*Lz) *dz += Lz;
 	}
 }
 
@@ -243,6 +262,8 @@ analysis::Trajectory::Trajectory(float timeStep, int frameWidth, char fileFormat
 	this->timeStep = timeStep;
 	this->frameWidth = frameWidth;
 	format = fileFormat;
+	nAtoms = nAtomTypes = nMols = 0;
+	Lx = Ly = Lz = 0.0;
 	xCom = yCom = zCom = 0.0;
 }
 
@@ -270,8 +291,31 @@ void analysis::Trajectory::openTrajectory(bool count)
 
 			sscanf(pipeString, "%d", &nAtoms);
 
-			for(int i = 0; i < 5; i++)
-				fgets(pipeString, 500, fileI);
+			fgets(pipeString, 500, fileI);
+
+			float x1, x2 = 0.0;
+
+			fgets(pipeString, 500, fileI);
+			sscanf(pipeString, "%f %f", &x1, &x2);
+			Lx = abs(float(x2) - float(x1));
+
+			fgets(pipeString, 500, fileI);
+			sscanf(pipeString, "%f %f", &x1, &x2);
+			Ly = abs(float(x2) - float(x1));
+
+			fgets(pipeString, 500, fileI);
+			sscanf(pipeString, "%f %f", &x1, &x2);
+			Lz = abs(float(x2) - float(x1));
+
+			if(Lz < 0.1)
+			{
+				Lz = 0.0;
+				dimension = 2;
+			}
+			else
+				dimension = 3;
+
+			fgets(pipeString, 500, fileI);
 
 			if(strcmp(pipeString, "ITEM: ATOMS id element x y ix iy\n") == 0)
 			{
@@ -288,6 +332,20 @@ void analysis::Trajectory::openTrajectory(bool count)
 				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "f", "f", "f", "f", "d", "d");
 				line_fmt_mode = 3;
 			}
+			else if(strcmp(pipeString, "ITEM: ATOMS id mol element x y z ix iy iz\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s %%%s\n", "d", "d", "c", "f", "f", "f", "d", "d", "d");
+				line_fmt_mode = 4;
+
+				int mol_nr;
+				for(int i = 0; i < nAtoms; i++)
+				{
+					fgets(pipeString, 500, fileI);
+					sscanf(pipeString, "%*d %d", &mol_nr);
+
+					if(mol_nr > nMols) nMols = mol_nr;
+				}
+			}
 			else
 			{
 				printf("Invalid line format in trajectory %s. Exiting...\n", fpathI);
@@ -297,7 +355,21 @@ void analysis::Trajectory::openTrajectory(bool count)
 
 		rewind(fileI);
 		frame_nr = -1;
-		printf("\nTrajectory %s file opened and ready to be read...\n", fpathI);
+
+		printf("\nInput trajectory %s file opened and ready to be read...\n", fpathI);
+		printf("\nTrajectory Stats:\n");
+		printf("\nTotal number of atoms: %d", nAtoms);
+
+		if(nMols > 0)
+			printf("\nTotal number of molecules: %d", nMols);
+
+		if(strcmp(format, "cfg") == 0)
+		{
+			if(Lz == 0.0)
+				printf("\n2D simulation box | Lx = %.2f | Ly = %.2f\n", Lx, Ly);
+			else
+				printf("\n3D simulation box | Lx = %.2f | Ly = %.2f | Lz = %.2f\n", Lx, Ly, Lz);
+		}
 	}
 
 	if(count == true)
@@ -369,7 +441,7 @@ void analysis::Trajectory::loadTrajectory(atom_style **ATOMS, System *BOX, int f
 					if(dy <= -0.5*BOX->Ly) ATOMS[new_frame][i].jumpy++;
 					else if(dy >= 0.5*BOX->Ly) ATOMS[new_frame][i].jumpy--;
 
-					// if(ATOMS[new_frame][i].id == 'O')
+					// if(ATOMS[new_frame][i].element == 'O')
 					// 	printf("Frame %d, Jumpy = %d\n", new_frame, ATOMS[new_frame][i].jumpy);
 				}	
 			}
@@ -392,8 +464,9 @@ void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To, bool 
 {
 	for(int i = 0; i < nAtoms; i++)
 	{
+		To[i].atom_id = From[i].atom_id;
 		To[i].type = From[i].type;
-		To[i].id = From[i].id;
+		To[i].element = From[i].element;
 		To[i].rxt1 = From[i].rxt1;
 		To[i].ryt1 = From[i].ryt1;
 
@@ -435,7 +508,7 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 		for(int i = 0; i < nAtoms; i++)
 		{
 			fgets(pipeString, 500, fileI);
-			sscanf(pipeString, "%c %f %f %*f %*f %*f", &ATOMS[i].id, &ATOMS[i].rxt1, &ATOMS[i].ryt1);
+			sscanf(pipeString, "%c %f %f %*f %*f %*f", &ATOMS[i].element, &ATOMS[i].rxt1, &ATOMS[i].ryt1);
 		}		
 	}
 
@@ -459,20 +532,23 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			pid -= 1;
 
 			if(line_fmt_mode == 1)
-				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
 			else if(line_fmt_mode == 2)
-				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
 			else if(line_fmt_mode == 3)
-				sscanf(pipeString, line_fmt, &temp_id, &ATOMS[pid].id, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].fx, &ATOMS[pid].fy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].fx, &ATOMS[pid].fy, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy);
 
-			if(ATOMS[pid].id == 'O') 
+			else if(line_fmt_mode == 4)
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].mol_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].rzt1, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy, &ATOMS[pid].jumpz);
+
+			if(ATOMS[pid].element == 'O') 
 			{
 				ATOMS[pid].si = +1;
 				ATOMS[pid].type = 1;
 			}
-			else if(ATOMS[pid].id == 'N')
+			else if(ATOMS[pid].element == 'N')
 			{
 				ATOMS[pid].si = -1;
 				ATOMS[pid].type = 2;
@@ -491,7 +567,7 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 		fprintf(fileO, " Atoms. Timestep: %ld\n", step + add_step);
 
 		for(int i = 0; i < nAtoms; i++)
-			fprintf(fileO, "%c %g %g 0\n", ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1);
+			fprintf(fileO, "%c %g %g 0\n", ATOMS[i].element, ATOMS[i].rxt1, ATOMS[i].ryt1);
 	}
 
 	else if(strcmp(format, "cfg") == 0)
@@ -510,7 +586,7 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 			fprintf(fileO, "ITEM: ATOMS id element x y ix iy\n");
 
 			for(int i = 0; i < nAtoms; i++)
-				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+				fprintf(fileO, line_fmt, ATOMS[i].atom_id, ATOMS[i].element, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].jumpx, ATOMS[i].jumpy);	
 		}
 
 		else if(line_fmt_mode == 2)
@@ -518,7 +594,7 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 			fprintf(fileO, "ITEM: ATOMS id element x y vx vy ix iy\n");
 
 			for(int i = 0; i < nAtoms; i++)
-				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+				fprintf(fileO, line_fmt, ATOMS[i].atom_id, ATOMS[i].element, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
 		}
 
 		else if(line_fmt_mode == 3)
@@ -526,7 +602,7 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 			fprintf(fileO, "ITEM: ATOMS id element x y vx vy fx fy ix iy\n");
 
 			for(int i = 0; i < nAtoms; i++)
-				fprintf(fileO, line_fmt, i+1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].fx, ATOMS[i].fy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
+				fprintf(fileO, line_fmt, ATOMS[i].atom_id, ATOMS[i].element, ATOMS[i].rxt1, ATOMS[i].ryt1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].fx, ATOMS[i].fy, ATOMS[i].jumpx, ATOMS[i].jumpy);	
 		}
 	}
 }

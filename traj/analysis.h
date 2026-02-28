@@ -18,10 +18,10 @@ namespace analysis {
 
 	public:
 
-	char id;
-	int type, si;
-	float rxt1, ryt1; 		// *) Used in MSD calculations 
-	float rxt2, ryt2; 
+	char element;
+	int atom_id, type, si;
+	float rxt1, ryt1;
+	float rxt2, ryt2;		// *) Used in MSD calculations
 	float vx, vy, vz;
 	float vxth, vyth;
 	float fx, fy;
@@ -31,25 +31,39 @@ namespace analysis {
 	atomsXYZ();
 	~atomsXYZ();
 	
-	} atom_style;
+	};
+
+	typedef class molecularXYZ : public atomsXYZ {
+
+	public:
+
+	int mol_id;
+	float rzt1;
+	int jumpz;
+
+	molecularXYZ();
+	~molecularXYZ();
+
+	}atom_style;
 
 	class System {
 
 	public:
 
-	float Lx, Ly, rcellx, rcelly;
-	int Ncellx, Ncelly, ncells;
-	int nAtoms, nAtomTypes;
+	int dimension;
+	float Lx, Ly, Lz, rcellx, rcelly, rcellz;
+	int Ncellx, Ncelly, Ncellz, ncells;
+	int nAtoms, nAtomTypes, nMols;
 
 	int MAPS[MAXCELL], HEAD[MAXCELL], LIST[MAXCELL];
 
-	System(float Lx, float Ly, int nAtoms, int nAtomTypes, bool buildMaps = false, float rcellx = rcutoff, float rcelly = rcutoff);
+	System(float Lx, float Ly, float Lz, int nAtoms, int nAtomTypes, bool buildMaps = false, float rcellx = rcutoff, float rcelly = rcutoff, float rcellz = rcutoff);
 	~System();
 
 	int cellindex(int ix, int iy);
 	void buildCellMaps();
 	void buildCellList(atom_style *ATOMS);
-	void checkMinImage(float *dx = NULL, float *dy = NULL);
+	void checkMinImage(float *dx = NULL, float *dy = NULL, float *dz = NULL);
 
 	};
 
@@ -115,9 +129,11 @@ namespace analysis {
 	public:
 
 	long step; 
-	int nAtoms, nAtomTypes;
 	int frame_nr, totalFrames, frameWidth;
 	float timeStep, time;
+	int nAtoms, nAtomTypes, nMols;
+	int dimension;
+	float Lx, Ly, Lz;
 	float xCom, yCom, zCom; 
 	char *format;
 	char line_fmt[50];

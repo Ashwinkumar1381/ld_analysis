@@ -4,8 +4,9 @@
 	Calculates 1D full and partial pair distribution functions - g(x) and g(y)
 	Bins particles according to their longitudinal (x-) and lateral (y-) distances
 
+	Author		  : Ashwin Kumar
 	Date created  : 25.04.25
-	Last modified : 06.07.25
+	Last modified : 20.02.26
 */
 
 #define PI 3.14159265359 
@@ -143,7 +144,7 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 			if(abs(dxij) < Rcut[0] and abs(dyij) < Rcut[1])
 			{
 
-				// printf("Atom %d(%c) and %d(%c) are separated by dx=%f and dy=%f\n", i, ATOMS[i].id, j, ATOMS[j].id, dxij, dyij);
+				// printf("Atom %d(%c) and %d(%c) are separated by dx=%f and dy=%f\n", i, ATOMS[i].element, j, ATOMS[j].element, dxij, dyij);
 
 				// ---------- Bins symmetric about origin ----------
 				if(strcmp(option, "symm") == 0)
@@ -156,12 +157,12 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 						if(nRDFtypes > 1)
 						{
-							if(ATOMS[i].id == ATOMS[j].id)
+							if(ATOMS[i].element == ATOMS[j].element)
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 									RDFx[1][bin_x] += 2.0;
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 									RDFx[4][bin_x] += 2.0;
 							}
 
@@ -181,12 +182,12 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 						if(nRDFtypes > 1)
 						{
-							if(ATOMS[i].id == ATOMS[j].id)
+							if(ATOMS[i].element == ATOMS[j].element)
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 									RDFy[1][bin_y] += 2.0;
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 									RDFy[4][bin_y] += 2.0;
 							}
 
@@ -212,15 +213,15 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 						if(nRDFtypes > 1)
 						{
-							if(ATOMS[i].id == ATOMS[j].id)
+							if(ATOMS[i].element == ATOMS[j].element)
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 								{
 									RDFx[1][bin_xi] += 1.0;
 									RDFx[1][bin_xj] += 1.0;
 								}
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 								{
 									RDFx[4][bin_xi] += 1.0;
 									RDFx[4][bin_xj] += 1.0;	
@@ -229,13 +230,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 							else
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 								{
 									RDFx[2][bin_xi] += 1.0;
 									RDFx[3][bin_xj] += 1.0;	
 								}
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 								{
 									RDFx[3][bin_xi] += 1.0;
 									RDFx[2][bin_xj] += 1.0;
@@ -254,15 +255,15 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 						if(nRDFtypes > 1)
 						{
-							if(ATOMS[i].id == ATOMS[j].id)
+							if(ATOMS[i].element == ATOMS[j].element)
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 								{
 									RDFy[1][bin_yi] += 1.0;
 									RDFy[1][bin_yj] += 1.0;
 								}
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 								{
 									RDFy[4][bin_yi] += 1.0;
 									RDFy[4][bin_yj] += 1.0;	
@@ -271,13 +272,13 @@ void computeRDF_1D(float ***RDF_x_y, atom_style *ATOMS, System *BOX, int nRDFtyp
 
 							else
 							{
-								if(ATOMS[i].id == 'O')
+								if(ATOMS[i].element == 'O')
 								{
 									RDFy[2][bin_yi] += 1.0;
 									RDFy[3][bin_yj] += 1.0;	
 								}
 
-								else if(ATOMS[i].id == 'N')
+								else if(ATOMS[i].element == 'N')
 								{
 									RDFy[3][bin_yi] += 1.0;
 									RDFy[2][bin_yj] += 1.0;

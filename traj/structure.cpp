@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 
 	// -------------- System Params --------------
 	float Lx = 150, Ly = 30; 
+	int nAtomTypes = 2;
 	float delk[2] = {float(2*PI/Lx), float(2*PI/Ly)};
 
 	int fac[2] = {75, 60};
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms);
+	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
 
 	TRAJ -> write2file(NULL, kx, ky, Nk, 1);
 
@@ -71,7 +72,7 @@ float **computeStructureFactor(atom_style *ATOMS, Trajectory *TRAJ, float kx[], 
 
 		for(int j = 0; j < TRAJ->nAtoms; j++)
 		{
-			if(ATOMS[j].id == 'O')
+			if(ATOMS[j].element == 'O')
 			{
 				float cx = kn * ATOMS[j].rxt1;
 				ax += cos(cx);
@@ -89,7 +90,7 @@ float **computeStructureFactor(atom_style *ATOMS, Trajectory *TRAJ, float kx[], 
 
 		for(int j = 0; j < TRAJ->nAtoms; j++)
 		{
-			if(ATOMS[j].id == 'O')
+			if(ATOMS[j].element == 'O')
 			{
 				float cy = kn * ATOMS[j].ryt1;
 			

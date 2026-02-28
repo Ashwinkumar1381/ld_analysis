@@ -5,7 +5,7 @@
 	from a .cfg file or just coordinates from a .xyz file  
 
 	Date created  : 05.05.25
-	Last modified : 31.07.25
+	Last modified : 20.02.26
 */
 
 #include "analysis.h"
@@ -65,14 +65,14 @@ int main(int argc, char* argv[])
 	fprintf(TRAJ->fileO, "\n\nAtoms # atomic\n");
 
 	for(int i = 0; i < TRAJ->nAtoms; i++)
-		fprintf(TRAJ->fileO, "\n%d %c %f %f %f", i + 1, ATOMS[i].id, ATOMS[i].rxt1, ATOMS[i].ryt1, 0.0);
+		fprintf(TRAJ->fileO, "\n%d %c %f %f %f", ATOMS[i].atom_id, ATOMS[i].element, ATOMS[i].rxt1, ATOMS[i].ryt1, 0.0);
 
 	if(strcmp(TRAJ->format, "cfg") == 0)
 	{
 		fprintf(TRAJ->fileO, "\n\nVelocities # atomic\n");
 
 		for(int i = 0; i < TRAJ->nAtoms; i++)
-			fprintf(TRAJ->fileO, "\n%d %f %f %f", i + 1, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].vz);
+			fprintf(TRAJ->fileO, "\n%d %f %f %f", ATOMS[i].atom_id, ATOMS[i].vx, ATOMS[i].vy, ATOMS[i].vz);
 	}
 	
 	TRAJ -> closeTrajectory();
