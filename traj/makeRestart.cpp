@@ -23,11 +23,11 @@ int main(int argc, char* argv[])
 	float dt = 5e-4;
 	int frameW = int(1e5);
 	long eqStep = long(1e7);
-	long chooseStep = long(3.2e9);
+	long chooseStep = long(5e9);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "/home/ethaya_lab_c1/Desktop/ashwin_md/LD/lmp/lane/Nov2025/Fd600/tau_2e-2/traj2.cfg");
-	sprintf(TRAJ->fpathO, "/home/ethaya_lab_c1/Desktop/ashwin_md/LD/lmp/lane/Nov2025/Fd600/tau_2e-2/lane.%ld.res", eqStep + chooseStep);
+	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/lane.%ld.res", eqStep + chooseStep);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ -> nAtoms]; 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 
 		if(TRAJ -> step == (eqStep + chooseStep))
 		{
-			printf("Step %ld extracted for restart simulations\n", TRAJ->step);
+			printf("\nStep %ld extracted for restart simulations\n", TRAJ->step);
 			break;
 		}
 	}	

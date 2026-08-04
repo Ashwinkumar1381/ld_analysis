@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 	// ------------ Trajectory Params ------------
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	int frameStart = int(4e4), frameEnd = int(5e4);
+	int frameStart = int(10), frameEnd = int(100);
 
 	// ------------ System Params ------------
 	int nAtomTypes = 2;
@@ -18,12 +18,13 @@ int main(int argc, char *argv[])
 	int nBins = 100;
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-1/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug2025/Fd100/tau_5e-1/velocityDist.dat");
+	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_5e-3/traj1.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_5e-3/velocityDist_eq.dat");
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	velocityDist *Dist = new velocityDist(2, nBins); 
+	System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
+	velocityDist *Dist = new velocityDist(2, nBins, BOX); 
 
 	printf("\nScanning particle velocities to set distribution bounds...\n");
 
@@ -35,7 +36,7 @@ int main(int argc, char *argv[])
 		TRAJ -> readThisFrame(ATOMS);
 
 		if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
-			Dist -> scanVelocities(ATOMS, TRAJ->nAtoms);
+			Dist -> scanVelocities(ATOMS, BOX);
 
 		if(TRAJ->frame_nr == frameEnd)
 		{
@@ -46,8 +47,9 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\nIdentified bounds. Creating velocity distribution...\n");
+	// printf("%f %f %f %f\n", Dist->max_val[0], Dist->min_val[0], Dist->max_val[1], Dist->min_val[1]);
 
-	Dist -> createBins();
+	Dist -> createBins(BOX);
 
 	printf("\nBinning velocities...\n");
 
@@ -56,7 +58,7 @@ int main(int argc, char *argv[])
 		TRAJ -> readThisFrame(ATOMS);
 
 		if(TRAJ->frame_nr <= frameEnd)
-			Dist -> binVelocities(ATOMS, TRAJ->nAtoms);
+			Dist -> binVelocities(ATOMS, BOX, false);
 
 		if(TRAJ->frame_nr == frameEnd)
 			break;
@@ -74,29 +76,31 @@ int main(int argc, char *argv[])
 	delete[] ATOMS;
 }
 
-analysis::velocityDist::velocityDist(int nDims, int nBins)
+analysis::velocityDist::velocityDist(int nDims, int nBins, System *BOX)
 {
 	this->nDims = nDims;
 	this->nBins = nBins;
 
-	Bins = new float*[nDims];
+	Bins = new float*[int(nDims*(1 + BOX->nAtomTypes))];
 	min_val = new float[nDims];
 	max_val = new float[nDims];
 	binW = new float[nDims];
-	ctr = new long[nDims];
+	ctr = new long[int(nDims*(1 + BOX->nAtomTypes))];
 
 	for(int i = 0; i < nDims; i++)
 	{
 		min_val[i] = 1e5;
 		max_val[i] = 0.0;
 		binW[i] = 0.0;
-		ctr[i] = 0;
 	}
+
+	for(int i = 0; i < int(nDims*(1 + BOX->nAtomTypes)); i++)
+		ctr[i] = 0;
 }
 
-void analysis::velocityDist::scanVelocities(atom_style *ATOMS, int nAtoms)
+void analysis::velocityDist::scanVelocities(atom_style *ATOMS, System *BOX)
 {
-	for(int i = 0; i < nAtoms; i++)
+	for(int i = 0; i < BOX->nAtoms; i++)
 	{
 		if(ATOMS[i].vx > max_val[0]) max_val[0] = ATOMS[i].vx;
 		if(ATOMS[i].vy > max_val[1]) max_val[1] = ATOMS[i].vy;
@@ -106,7 +110,7 @@ void analysis::velocityDist::scanVelocities(atom_style *ATOMS, int nAtoms)
 	}
 }
 
-void analysis::velocityDist::createBins()
+void analysis::velocityDist::createBins(System *BOX)
 {	
 	for(int i = 0; i < nDims; i++)
 	{
@@ -116,25 +120,65 @@ void analysis::velocityDist::createBins()
 		if(abs(max_val[i]) < abs(min_val[i])) max_val[i] = abs(min_val[i]); 
 
 		binW[i] = 2 * max_val[i] / nBins;
+	}
 
+	for(int i = 0; i < int(nDims*(1 + BOX->nAtomTypes)); i++)
+	{
 		Bins[i] = new float[nBins];
 		for(int j = 0; j < nBins; j++)
 			Bins[i][j] = 0.0;
 	}
 }
 
-void analysis::velocityDist::binVelocities(atom_style *ATOMS, int nAtoms)
+void analysis::velocityDist::binVelocities(atom_style *ATOMS, System *BOX, bool subtract_vcom)
 {
-	for(int i = 0; i < nAtoms; i++)
+	float *vCom = new float[2];
+	vCom[0] = 0.0; 
+	vCom[1] = 0.0;
+
+	if(subtract_vcom == true)
+	{
+		for(int i = 0; i < BOX->nAtoms; i++)
+		{
+			vCom[0] += ATOMS[i].vx;
+			vCom[1] += ATOMS[i].vy;
+		}
+
+		vCom[0] /= BOX->nAtoms; 
+		vCom[1] /= BOX->nAtoms;
+
+		for(int i = 0; i < BOX->nAtoms; i++)
+		{
+			ATOMS[i].vx -= vCom[0];
+			ATOMS[i].vy -= vCom[1];
+		}
+	}
+
+	for(int i = 0; i < BOX->nAtoms; i++)
 	{
 		int bin_vx = int((ATOMS[i].vx + max_val[0]) / binW[0]);
 		int bin_vy = int((ATOMS[i].vy + max_val[1]) / binW[1]);
 
 		Bins[0][bin_vx] += 1.0;
 		Bins[1][bin_vy] += 1.0;
-
 		ctr[0] += 1;
 		ctr[1] += 1;
+
+		if(ATOMS[i].type == 1)
+		{
+			Bins[2][bin_vx] += 1.0;
+			Bins[3][bin_vy] += 1.0;
+			ctr[2] += 1;
+			ctr[3] += 1;
+		}
+
+		else if(ATOMS[i].type == 2)
+		{
+			Bins[4][bin_vx] += 1.0;
+			Bins[5][bin_vy] += 1.0;
+			ctr[4] += 1;
+			ctr[5] += 1;
+		}
 	}
 }
 
@@ -144,16 +188,20 @@ void analysis::velocityDist::normalize()
 	{
 		Bins[0][i] /= (ctr[0] * binW[0]);
 		Bins[1][i] /= (ctr[1] * binW[1]);
+		Bins[2][i] /= (ctr[2] * binW[0]);
+		Bins[3][i] /= (ctr[3] * binW[1]);
+		Bins[4][i] /= (ctr[4] * binW[0]);
+		Bins[5][i] /= (ctr[5] * binW[1]);
 	}
 }
 
 void analysis::Trajectory::write2file(velocityDist *Dist)
 {
 	char string[100];
-	sprintf(string, "bin vx_dist vy_dist\nVxmax %g Vymax %g VxbinW %g VybinW %g", Dist->max_val[0], Dist->max_val[1], Dist->binW[0], Dist->binW[1]);
+	sprintf(string, "bin vx_dist vy_dist vxA_dist vyA_dist vxB_dist vyB_dist\nVxmax %g Vymax %g VxbinW %g VybinW %g", Dist->max_val[0], Dist->max_val[1], Dist->binW[0], Dist->binW[1]);
 
 	createOutputFile(string);
 
 	for(int i = 0; i < Dist->nBins; i++)
-		fprintf(fileO, "\n%d %g %g", i + 1, Dist->Bins[0][i], Dist->Bins[1][i]);
+		fprintf(fileO, "\n%d %g %g %g %g %g %g", i + 1, Dist->Bins[0][i], Dist->Bins[1][i], Dist->Bins[2][i], Dist->Bins[3][i], Dist->Bins[4][i], Dist->Bins[5][i]);
 }

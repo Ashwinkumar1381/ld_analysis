@@ -21,16 +21,16 @@ int main(int argc, char *argv[])
 	/* -------- Trajectory Params -------- */
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	int frameStart = int(0e4), frameEnd = int(5e4);
+	int frameStart = int(3e4), frameEnd = int(5e4);
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd100/tau_1e-3/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/Expansion/ashwin_md/lane/Aug_Sept2025/Fd100/tau_1e-3/");
+	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/");
 
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+	System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
@@ -59,7 +59,8 @@ int main(int argc, char *argv[])
 
 	if(strcmp(option, "time_avg_traj") == 0)
 	{
-		float min = 1e3, max = 0.0, avg = 0.0;
+		int choice = 0;
+		float min = 1e4, max = 0.0, avg = 0.0;
 
 		int ctr = 0;
 		while( !feof(TRAJ->fileI) )
@@ -69,10 +70,10 @@ int main(int argc, char *argv[])
 			if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
 			{
 				float *temp = computeKineticTemperature(ATOMS, BOX); 
-				avg += temp[0];
+				avg += temp[choice];
 
-				if(temp[0] < min) min = temp[0];
-				if(temp[0] > max) max = temp[0];
+				if(temp[choice] < min) min = temp[choice];
+				if(temp[choice] > max) max = temp[choice];
 
 				ctr++;
 			}

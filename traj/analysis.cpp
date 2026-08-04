@@ -16,7 +16,7 @@ using namespace analysis;
 analysis::atomsXYZ::atomsXYZ()
 {
 	rxt1 = ryt1 = rxt2 = ryt2 = 0.0;
-	vx = vy = vz = vxth = vyth = 0.0;
+	vx = vy = vz = vxth = vyth = vzth = 0.0;
 	fx = fy = fx_int = fy_int = 0.0;
 	si = 1;
 	jumpx = jumpy = 0;
@@ -346,6 +346,11 @@ void analysis::Trajectory::openTrajectory(bool count)
 					if(mol_nr > nMols) nMols = mol_nr;
 				}
 			}
+			else if(strcmp(pipeString, "ITEM: ATOMS id element vx vy vz\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "f");
+				line_fmt_mode = 5;
+			}
 			else
 			{
 				printf("Invalid line format in trajectory %s. Exiting...\n", fpathI);
@@ -382,7 +387,7 @@ void analysis::Trajectory::createOutputFile(char line[])
 	fileO = fopen(fpathO, "a+");
 	if(fileO == NULL)
 	{
-		printf("Cannot create file %s for writing. Exiting...\n");
+		printf("Cannot create file %s for writing. Exiting...\n", fpathO);
 		exit(-1);
 	}
 	if(strcmp(line, "") != 0)
@@ -469,11 +474,21 @@ void analysis::Trajectory::copyThisFrame(atom_style *From, atom_style *To, bool 
 		To[i].element = From[i].element;
 		To[i].rxt1 = From[i].rxt1;
 		To[i].ryt1 = From[i].ryt1;
+		To[i].vx = From[i].vx;
+		To[i].vy = From[i].vy;
+		
+		if(dimension == 3)
+		{
+			To[i].rzt1 = From[i].rzt1;
+			To[i].vz = From[i].vz;
+		}
 
 		if(unwrap_pbc == false)
 		{
 			To[i].jumpx = From[i].jumpx;
 			To[i].jumpy = From[i].jumpy;
+			if(dimension == 3) 
+				To[i].jumpz = From[i].jumpz;
 		}
 	}
 }
@@ -543,6 +558,9 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			else if(line_fmt_mode == 4)
 				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].mol_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1, &ATOMS[pid].rzt1, &ATOMS[pid].jumpx, &ATOMS[pid].jumpy, &ATOMS[pid].jumpz);
 
+			else if(line_fmt_mode == 5)
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].vz);
+
 			if(ATOMS[pid].element == 'O') 
 			{
 				ATOMS[pid].si = +1;
@@ -575,7 +593,7 @@ void analysis::Trajectory::writeThisFrame(atom_style *ATOMS, System *BOX, long a
 		fprintf(fileO, "ITEM: TIMESTEP\n");
 		fprintf(fileO, "%ld\n", step + add_step);
 		fprintf(fileO, "ITEM: NUMBER OF ATOMS\n");
-		fprintf(fileO, "%ld\n", nAtoms);
+		fprintf(fileO, "%d\n", nAtoms);
 		fprintf(fileO, "ITEM: BOX BOUNDS pp pp pp\n");
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Lx);
 		fprintf(fileO, "%g %g\n", 0.0, BOX->Ly);
@@ -644,6 +662,7 @@ long** analysis::Trajectory::sortAtomsByType(atom_style *ATOMS, System *BOX)
 		ctr[i] = 0;
 	}
 
+	// Counts the number of atoms belonging to a specific group
 	for(int i = 0; i < nAtoms; i++)
 	{
 		if(ATOMS[i].type == 0 or ATOMS[i].type > BOX->nAtomTypes)
@@ -655,6 +674,7 @@ long** analysis::Trajectory::sortAtomsByType(atom_style *ATOMS, System *BOX)
 		group_lists[0][ATOMS[i].type - 1]++;
 	}
 
+	// Creates lists to categorize atoms by type 
 	for(int i = 0; i < BOX->nAtomTypes; i++)
 	{
 		group_lists[i + 1] = new long[group_lists[0][i]];
@@ -662,6 +682,7 @@ long** analysis::Trajectory::sortAtomsByType(atom_style *ATOMS, System *BOX)
 			group_lists[i + 1][j] = 0;
 	}
 
+	// Sort atoms into their respective lists
 	for(int i = 0; i < nAtoms; i++)
 	{
 		group_lists[ATOMS[i].type][ctr[ATOMS[i].type - 1]] = i + 1;

@@ -4,7 +4,7 @@
 	*) Dzubiella, J. et al. (2002) Physical Review E, 65(2) - computeLaneOrder2(), computeLaneOrder2B()
 
 	Author 		  : Ashwin Kumar
-	Last Modified : 20.02.26 
+	Last Modified : 13.03.26 
 */
 
 #define NUM_THREADS 1
@@ -24,7 +24,7 @@ int main(int argc, char*argv[])
 	// Trajectory params
 	float dt = 5e-4;
 	int frameW = int(1e5);
-	int frameStart = int(0e4), frameEnd = int(2e4);
+	int frameStart = int(0e4), frameEnd = int(1e4);
 
 	// System params
 	int nAtomTypes = 2;
@@ -36,20 +36,20 @@ int main(int argc, char*argv[])
 	// Keywords and values for option = time_evolve_traj 
 	int Nfreq = 1; 						// Obtain averages for every Nfreq frames
 	int Nsample = 1; 					// Use Nsample frames to compute the average  
-	int Nevery = 1;						// Obtain Nsample frames at intervals of Nevery before the current frame whose average we desire to compute 
+	int Nevery = 1;						// Obtain Nsample frames at intervals of Nevery before the current frame whose average we desire to compute
 
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd800/tau_3.9e-2/traj2.cfg");
+	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/traj_res_1.cfg");
 
 	if(strcmp(option, "time_evolve_traj") == 0)
 	{
-		sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd800/tau_3.9e-2/laneOrder_steady.dat");
+		sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_1e0/laneOrder_res1.dat");
 
 		TRAJ -> openTrajectory();
 		TRAJ -> createOutputFile("step order");
 
 		atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-		System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+		System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 		int ctr = 0;
 		float avg = 0.0;
@@ -96,7 +96,7 @@ int main(int argc, char*argv[])
 				break;
 		}
 
-		printf("Computed order parameter for %d frames.\n", ctr);
+		printf("\nComputed order parameter for %d frames.\n", ctr);
 
 		TRAJ -> closeTrajectory();
 	}
@@ -119,7 +119,7 @@ int main(int argc, char*argv[])
 			TRAJ -> openTrajectory();
 
 			atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-			System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+			System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 			TRAJ -> readThisFrame(ATOMS);
 			float order = computeLaneOrder1(ATOMS, BOX, slabW);
@@ -142,7 +142,7 @@ int main(int argc, char*argv[])
 			TRAJ -> openTrajectory();
 
 			atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-			System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+			System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 			TRAJ -> readThisFrame(ATOMS);
 			float order = computeLaneOrder1(ATOMS, BOX, slabW);
@@ -158,7 +158,7 @@ int main(int argc, char*argv[])
 	{
 		TRAJ -> openTrajectory();
 		atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-		System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+		System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 		int ctr = 0;
 		float avg = 0.0, max = 0.0, min = 1.0;

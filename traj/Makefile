@@ -48,5 +48,8 @@ power: power.cpp computeInteractions.cpp analysis.cpp ../../LD/LD-cpp/src/intera
 collision: collisions.cpp analysis.cpp
 	$(CC) $(CFLAGS) collisions.cpp analysis.cpp -o ./bin/coll.o
 
+velocity: velocity.cpp analysis.cpp
+	$(CC) $(CFLAGS) velocity.cpp analysis.cpp -o ./bin/velocity.o
+
 clean:
 	rm -f ./bin/*.o

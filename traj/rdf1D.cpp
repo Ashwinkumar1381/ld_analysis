@@ -6,7 +6,7 @@
 
 	Author		  : Ashwin Kumar
 	Date created  : 25.04.25
-	Last modified : 20.02.26
+	Last modified : 08.04.26
 */
 
 #define PI 3.14159265359 
@@ -21,27 +21,28 @@ int main(int argc, char* argv[])
 {
 	// ---------- Trajectory params ----------
 	float dt = 5e-4;
-	int frameW = int(1e5);
-	int frameStart = int(3e4), frameEnd = int(5e4);
+	int frameW = int(50);
+	int frameStart = int(0), frameEnd = int(5e4);
+	int frameEvery = 5;
 
 	// ---------- System params ----------
 	int nAtomTypes = 2;
-	float xA = 0.5, xB = 0.5;
-	float Lx = 150.0, Ly = 30.0, rho = 0.45;
+	float xA = 2.4691e-4, xB = 0.99975;
+	float Lx = 300.0, Ly = 30.0, rho = 0.45;
 
 	// ---------- RDF params ----------
-	float Rcut[2] = {10.0, 10.0};
+	float Rcut[2] = {5.0, 5.0};
 	char option[10] = "asymm";
 	int Nbins[2] = {100, 100};
 
 	// ---------- Opening trajectory ----------
 	Trajectory *TRAJ = new Trajectory(dt, frameW, "cfg");
-	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_4e-2/traj2.cfg");
-	sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/lane/Aug_Nov2025/Fd100/tau_4e-2/laneRDF_1D_%s.dat", option);
+	sprintf(TRAJ->fpathI, "//media/ashwin/ASH_DRIVE_3/ashwin_md/psps/tau_1e-1/Fd500/traj2.cfg");
+	sprintf(TRAJ->fpathO, "//media/ashwin/ASH_DRIVE_3/ashwin_md/psps/tau_1e-1/Fd500/laneRDF_1D_%s.dat", option);
 	TRAJ -> openTrajectory();
 
 	atom_style *ATOMS = new atom_style[TRAJ->nAtoms];
-	System *BOX = new System(Lx, Ly, TRAJ->nAtoms, nAtomTypes);
+	System *BOX = new System(TRAJ->Lx, TRAJ->Ly, TRAJ->Lz, TRAJ->nAtoms, nAtomTypes);
 
 	// ---------- RDF initialization ----------
 	float binW[2] = {float(Rcut[0]/Nbins[0]), float(Rcut[1]/Nbins[1])};
@@ -60,15 +61,15 @@ int main(int argc, char* argv[])
 	{
 		TRAJ -> readThisFrame(ATOMS);
 
-		if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd)
+		if(TRAJ->frame_nr >= frameStart and TRAJ->frame_nr <= frameEnd and TRAJ->frame_nr%frameEvery == 0)
 		{
 			ctr++;
 			printf("Processing step %ld, frame %d\n", TRAJ->step, ctr);
 			computeRDF_1D(RDF_x_y, ATOMS, BOX, nRDFtypes, Rcut, binW, option);
-
-			if(TRAJ->frame_nr == frameEnd)
-				break;
 		}
+
+		if(TRAJ->frame_nr == frameEnd)
+			break;
 	}
 
 	// ---------- RDF normalization ----------

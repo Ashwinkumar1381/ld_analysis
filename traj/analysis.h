@@ -14,7 +14,7 @@ using namespace program;
 
 namespace analysis {
 
-	typedef class atomsXYZ {
+	class atomsXYZ {
 
 	public:
 
@@ -23,7 +23,7 @@ namespace analysis {
 	float rxt1, ryt1;
 	float rxt2, ryt2;		// *) Used in MSD calculations
 	float vx, vy, vz;
-	float vxth, vyth;
+	float vxth, vyth, vzth;
 	float fx, fy;
 	float fx_int, fy_int;
 	int jumpx, jumpy;
@@ -78,12 +78,12 @@ namespace analysis {
 	float *binW;
 	long *ctr;
 
-	velocityDist(int nDims = 2, int nBins = 0);
+	velocityDist(int nDims, int nBins, System *BOX);
 	~velocityDist(){};
 
-	void createBins();
-	void scanVelocities(atom_style *ATOMS, int nAtoms);
-	void binVelocities(atom_style *ATOMS, int nAtoms);
+	void createBins(System *BOX);
+	void scanVelocities(atom_style *ATOMS, System *BOX);
+	void binVelocities(atom_style *ATOMS, System *BOX, bool subtract_vcom = false);
 	void normalize();
 
 	};
