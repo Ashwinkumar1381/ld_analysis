@@ -351,6 +351,11 @@ void analysis::Trajectory::openTrajectory(bool count)
 				sprintf(line_fmt, "%%%s %%%s %%%s %%%s %%%s\n", "d", "c", "f", "f", "f");
 				line_fmt_mode = 5;
 			}
+			else if(strcmp(pipeString, "ITEM: ATOMS id element x y\n") == 0)
+			{
+				sprintf(line_fmt, "%%%s %%%s %%%s %%%s\n", "d", "c", "f", "f");
+				line_fmt_mode = 6;
+			}
 			else
 			{
 				printf("Invalid line format in trajectory %s. Exiting...\n", fpathI);
@@ -381,13 +386,15 @@ void analysis::Trajectory::openTrajectory(bool count)
 		countFrames();
 }
 
-void analysis::Trajectory::createOutputFile(char line[])
+void analysis::Trajectory::createOutputFile(char line[], bool newfile)
 {
-	remove(fpathO);
+	if(newfile == true)
+		remove(fpathO);
+
 	fileO = fopen(fpathO, "a+");
 	if(fileO == NULL)
 	{
-		printf("Cannot create file %s for writing. Exiting...\n", fpathO);
+		printf("Cannot create new file or open existing file %s for writing. Exiting...\n", fpathO);
 		exit(-1);
 	}
 	if(strcmp(line, "") != 0)
@@ -561,7 +568,10 @@ void analysis::Trajectory::readThisFrame(atom_style *ATOMS)
 			else if(line_fmt_mode == 5)
 				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].vx, &ATOMS[pid].vy, &ATOMS[pid].vz);
 
-			if(ATOMS[pid].element == 'O') 
+			else if(line_fmt_mode == 6)
+				sscanf(pipeString, line_fmt, &ATOMS[pid].atom_id, &ATOMS[pid].element, &ATOMS[pid].rxt1, &ATOMS[pid].ryt1);
+
+			if(ATOMS[pid].element == 'O')
 			{
 				ATOMS[pid].si = +1;
 				ATOMS[pid].type = 1;

@@ -147,7 +147,7 @@ namespace analysis {
 	~Trajectory();
 
 	void openTrajectory(bool count = false);
-	void createOutputFile(char line[] = "");
+	void createOutputFile(char line[] = "", bool newfile = true);
 	void closeTrajectory(bool closeI = true, bool closeO = true);
 	void loadTrajectory(atom_style **ATOMS, System *BOX, int frameStart, int frameEnd, bool unwrap_pbc = false);
 	void countFrames();
