@@ -30,12 +30,12 @@ int main(int argc, char *argv[])
 	float drift_vel = 0.0;
 	long nSamples = long(0);
 
-	#pragma omp parallel num_threads(5)
+	// #pragma omp parallel num_threads(1)
 	{
 		float partial_sum = 0.0;
 		long partial_count = 0;
 
-		#pragma omp for
+		// #pragma omp for
 		for(int currFrame = 0; currFrame < TRAJ->totalFrames; currFrame++)
 		{
 			if(currFrame%10 == 0)
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		#pragma omp critical
+		// #pragma omp critical
 		{
 			drift_vel += partial_sum;
 			nSamples += partial_count;
